@@ -19,6 +19,7 @@ aaaaaa
 - 회원가입/로그인/마이 페이지 - 백엔드 및 DB 와 연결
 - 로그인 하지 않아도 현행 처럼 이용가능하도록
 - 다음 페이지로 넘어가게 하는 UI ???
+- Create the Game!
 
 
 
@@ -39,6 +40,13 @@ aaaaaa
   border-color:transparent; color:#fff;
   background:linear-gradient(105deg,#28b4c1,#536dcf 62%,#876bc5); box-shadow:0 8px 18px #174b7860;}
 
+****** 깃 처음 다운받은 후 해야 할 일! ***************
+.venv 생성
+requirements 설치
+npm install
+.env 준비
+MySQL tourism_app 계정/권한
+source_snapshots 데이터 준비
 
 
 

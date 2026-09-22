@@ -1,41 +1,77 @@
 /* 실패한 호출을 완료된 기획으로 오해하지 않도록 글자와 배경을 함께 구분합니다. */
-.llm-trace-panel article.llm-trace-failed {
-  border-left: 3px solid #d86666;
-  background: #fff6f6;
-}
-.llm-trace-panel article.llm-trace-failed > b {
-  color: #9a4141;
-}
-.llm-trace-panel article > small {
-  overflow-wrap: anywhere;
-  line-height: 1.6;
-}
-
+.llm-trace-panel article.llm-trace-failed {border-left: 3px solid #d86666; background: #fff6f6;}
+.llm-trace-panel article.llm-trace-failed > b {color: #9a4141;}
+.llm-trace-panel article > small {overflow-wrap: anywhere; line-height: 1.6;}
 /* AI Router: semantic HTML pipeline, no additional visualization dependency. */
-.router-guide { padding:24px; margin-bottom:22px; border:1px solid #dce5f0; border-radius:20px; background:linear-gradient(140deg,#f3f8ff,#fcfefe); color:#1c354e; }
-.router-guide-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
-.router-guide-heading h2 { font-size:27px; margin:8px 0; letter-spacing:-.7px; }
-.router-guide-heading>div>span { font-size:11px; color:#477ca7; font-weight:800; letter-spacing:2px; }
-.router-guide p { font-size:13px; line-height:1.8; color:#52677c; margin:8px 0; }
-.router-mode-badge { display:flex; gap:7px; align-items:center; background:#173e60; color:white; border-radius:20px; padding:9px 13px; font-size:11px; overflow-wrap:anywhere; }
-.router-inputs { display:flex; gap:9px; flex-wrap:wrap; margin:24px 0 10px; }
-.router-inputs>span { display:flex; align-items:center; gap:7px; padding:10px 12px; border:1px solid #dce6f0; border-radius:10px; background:white; font-size:12px; }
-.router-connector { display:flex; align-items:center; justify-content:center; gap:9px; color:#657c92; font-size:12px; padding:13px 0; }
-.router-parallel-label { font-size:11px; color:#227a83; margin:7px 0; font-weight:700; }
-.router-research { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
-.router-sequence { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
-.router-stage { --stage-color:#2c71b2; min-width:0; padding:18px; border:1px solid #e0e8ef; border-top:3px solid var(--stage-color); border-radius:13px; background:#fff; box-shadow:0 4px 16px #1d456305; }
-.router-stage.tone-teal { --stage-color:#158479; }.router-stage.tone-violet { --stage-color:#7b61b8; }.router-stage.tone-amber { --stage-color:#b68225; }
-.router-stage header { display:flex; align-items:center; gap:10px; color:var(--stage-color); }
-.router-stage h3 { color:#203e58; font-size:15px; margin:0 0 4px; }.router-stage small { font-size:10px; color:#7a8b9d; }
-.router-model { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:12px 0 6px; font-size:11px; color:#45677e; }
-.router-model b { background:#eff4fa; padding:4px 8px; border-radius:6px; }.router-model.provider-gemma b { background:#e5f4ef; color:#217564; }.router-model.provider-openai b { background:#edf0fd; color:#5565a4; }
-.router-guide code { overflow-wrap:anywhere; font-size:11px; color:#52718b; }.router-stage details { border-top:1px solid #edf1f5; padding-top:10px; }
-.router-guide summary { cursor:pointer; font-size:12px; font-weight:700; color:#365875; }.router-stage dl { font-size:12px; line-height:1.7; }.router-stage dt { font-weight:700; }.router-stage dd { margin:3px 0 9px; color:#63798c; }
-.router-review-branch { display:flex; align-items:center; gap:13px; padding:17px; border:1px dashed #a8bad4; border-radius:12px; margin-top:17px; }.router-review-branch>svg { flex-shrink:0; color:#537da2; }.router-review-branch>div { flex:1; }.router-review-branch b { font-size:13px; }
-.router-output { display:flex; align-items:center; gap:15px; padding:18px; margin:14px 0; border-radius:13px; background:#e7f2ef; color:#236b61; }.router-output>svg { flex-shrink:0; }.router-output b { font-size:14px; }
-.router-limits { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:20px 0; }.router-limits article { padding:14px; border:1px solid #e0e7ee; border-radius:12px; background:#fff; }.router-limits span,.router-limits small { display:block; font-size:11px; color:#6b8093; line-height:1.6; }.router-limits strong { display:block; font-size:15px; line-height:1.7; margin:8px 0; overflow-wrap:anywhere; }
-.router-guide-details { display:grid; gap:8px; }.router-guide-details>details { padding:15px; background:#ffffffb8; border:1px solid #e0e8ef; border-radius:10px; }.router-guide-details summary>svg { vertical-align:middle; margin-right:7px; }.router-guide-details li { font-size:13px; line-height:1.9; color:#52677c; margin:6px 0; }.router-guide pre { font-size:12px; line-height:1.8; background:#162e44; color:#e2edf5; padding:16px; border-radius:9px; overflow:auto; }
-.router-connection-bar { display:flex; align-items:center; gap:15px; margin:15px 0; }.router-connection-bar p { font-size:12px; color:#62788a; flex:1; }.router-connection-bar button { border:1px solid #ccdae6; border-radius:8px; background:white; padding:10px 13px; color:#265b80; cursor:pointer; }
-@media(max-width:1000px) { .router-sequence { grid-template-columns:minmax(0,1fr); }.router-limits { grid-template-columns:minmax(0,1fr); } }
-@media(max-width:650px) { .router-guide { padding:15px; }.router-research { grid-template-columns:minmax(0,1fr); }.router-guide-heading,.router-connection-bar,.router-review-branch { flex-direction:column; align-items:flex-start; }.router-guide-heading h2 { font-size:23px; } }
+.router-guide {padding: 24px; margin-bottom: 22px; border: 1px solid #dce5f0; border-radius: 20px;
+  background: linear-gradient(140deg,#f3f8ff,#fcfefe); color: #1c354e;}
+.router-guide-heading {display: flex; align-items: flex-start; justify-content: space-between; gap: 18px;}
+.router-guide-heading h2 {font-size: 2.7rem; margin: 8px 0; letter-spacing: -.7px;}
+.router-guide-heading>div>span {font-size: 1.1rem; color: #477ca7; font-weight: 800; letter-spacing: 2px;}
+.router-guide p {font-size: 1.3rem; line-height: 1.8; color: #52677c; margin: 8px 0;}
+.router-mode-badge {display: flex; gap: 7px; align-items: center; background: #173e60; color: white;
+  border-radius: 20px; padding: 9px 13px; font-size: 1.1rem; overflow-wrap: anywhere;}
+.router-inputs {display: flex; gap: 9px; flex-wrap: wrap; margin: 24px 0 10px;}
+.router-inputs>span {display: flex; align-items: center; gap: 7px; padding: 10px 12px; border: 1px solid #dce6f0;
+  border-radius: 10px; background: white; font-size: 1.2rem;}
+.router-connector {display: flex; align-items: center; justify-content: center; gap: 9px; color: #657c92;
+  font-size: 1.2rem; padding: 13px 0;}
+.router-parallel-label {font-size: 1.1rem; color: #227a83; margin: 7px 0; font-weight: 700;}
+.router-research {display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px;}
+.router-sequence {display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px;}
+.router-stage {--stage-color: #2c71b2; min-width: 0; padding: 18px; border: 1px solid #e0e8ef;
+  border-top: 3px solid var(--stage-color); border-radius: 13px; background: #fff;
+  box-shadow: 0 4px 16px #1d456305;}
+.router-stage.tone-teal {--stage-color: #158479;}
+.router-stage.tone-violet {--stage-color: #7b61b8;}
+.router-stage.tone-amber {--stage-color: #b68225;}
+.router-stage header {display: flex; align-items: center; gap: 10px; color: var(--stage-color);}
+.router-stage h3 {color: #203e58; font-size: 1.5rem; margin: 0 0 4px;}
+.router-stage small {font-size: 1rem; color: #7a8b9d;}
+.router-model {display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 12px 0 6px;
+  font-size: 1.1rem; color: #45677e;}
+.router-model b {background: #eff4fa; padding: 4px 8px; border-radius: 6px;}
+.router-model.provider-gemma b {background: #e5f4ef; color: #217564;}
+.router-model.provider-openai b {background: #edf0fd; color: #5565a4;}
+.router-guide code {overflow-wrap: anywhere; font-size: 1.1rem; color: #52718b;}
+.router-stage details {border-top: 1px solid #edf1f5; padding-top: 10px;}
+.router-guide summary {cursor: pointer; font-size: 1.2rem; font-weight: 700; color: #365875;}
+.router-stage dl {font-size: 1.2rem; line-height: 1.7;}
+.router-stage dt {font-weight: 700;}
+.router-stage dd {margin: 3px 0 9px; color: #63798c;}
+.router-review-branch {display: flex; align-items: center; gap: 13px; padding: 17px; border: 1px dashed #a8bad4;
+  border-radius: 12px; margin-top: 17px;}
+.router-review-branch>svg {flex-shrink: 0; color: #537da2;}
+.router-review-branch>div {flex: 1;}
+.router-review-branch b {font-size: 1.3rem;}
+.router-output {display: flex; align-items: center; gap: 15px; padding: 18px; margin: 14px 0; border-radius: 13px;
+  background: #e7f2ef; color: #236b61;}
+.router-output>svg {flex-shrink: 0;}
+.router-output b {font-size: 1.4rem;}
+.router-limits {display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 20px 0;}
+.router-limits article {padding: 14px; border: 1px solid #e0e7ee; border-radius: 12px; background: #fff;}
+.router-limits span, .router-limits small {display: block; font-size: 1.1rem; color: #6b8093; line-height: 1.6;}
+.router-limits strong {display: block; font-size: 1.5rem; line-height: 1.7; margin: 8px 0;
+  overflow-wrap: anywhere;}
+.router-guide-details {display: grid; gap: 8px;}
+.router-guide-details>details {padding: 15px; background: #ffffffb8; border: 1px solid #e0e8ef;
+  border-radius: 10px;}
+.router-guide-details summary>svg {vertical-align: middle; margin-right: 7px;}
+.router-guide-details li {font-size: 1.3rem; line-height: 1.9; color: #52677c; margin: 6px 0;}
+.router-guide pre {font-size: 1.2rem; line-height: 1.8; background: #162e44; color: #e2edf5; padding: 16px;
+  border-radius: 9px; overflow: auto;}
+.router-connection-bar {display: flex; align-items: center; gap: 15px; margin: 15px 0;}
+.router-connection-bar p {font-size: 1.2rem; color: #62788a; flex: 1;}
+.router-connection-bar button {border: 1px solid #ccdae6; border-radius: 8px; background: white;
+  padding: 10px 13px; color: #265b80; cursor: pointer;}
+@media(max-width:1000px){
+  .router-sequence {grid-template-columns: minmax(0,1fr);}
+  .router-limits {grid-template-columns: minmax(0,1fr);}
+}
+@media(max-width:650px){
+  .router-guide {padding: 15px;}
+  .router-research {grid-template-columns: minmax(0,1fr);}
+  .router-guide-heading, .router-connection-bar, .router-review-branch {flex-direction: column;
+    align-items: flex-start;}
+  .router-guide-heading h2 {font-size: 2.3rem;}
+}

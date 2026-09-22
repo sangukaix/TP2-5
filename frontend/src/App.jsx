@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useEffect } from 'react'
+import { Component, lazy, Suspense, useEffect, useState } from 'react'
 import { resolveAppRoute } from './routes'
 import { initializeTheme } from './theme'
 import { isAdminSessionAuthenticated } from './features/admin/adminSession'
@@ -60,11 +60,19 @@ function NotFoundPage() {
 
 /** 현재 페이지 수가 적어 별도 Router 의존성 없이 경로별 화면만 지연 로딩합니다. */
 export default function App() {
+  const [pathname, setPathname] = useState(() => window.location.pathname)
+
   useEffect(() => {
     initializeTheme()
   }, [])
 
-  const route = resolveAppRoute(window.location.pathname)
+  useEffect(() => {
+    const syncPathname = () => setPathname(window.location.pathname)
+    window.addEventListener('popstate', syncPathname)
+    return () => window.removeEventListener('popstate', syncPathname)
+  }, [])
+
+  const route = resolveAppRoute(pathname)
   const pages = {
     home: TourismHomePage,
     dashboard: TourismDashboardPage,

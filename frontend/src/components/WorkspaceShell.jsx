@@ -21,7 +21,7 @@ const themedWorkspacePaths = new Set(['/dashboard', '/planning', '/strategy', '/
  * bid3의 224px 사이드바·64px 상단바 비율을 React + Vite에 맞춰 옮긴 공통 화면 틀입니다.
  * 입찰·결제 메뉴는 제거하고 관광 분석 업무 흐름만 남겼습니다.
  */
-export default function WorkspaceShell({ children }) {
+export default function WorkspaceShell({ children, topbarAction }) {
   const currentPath = resolveAppRoute(window.location.pathname).canonicalPath
   const pageClassName = themedWorkspacePaths.has(currentPath)
     ? 'workspace-shell oligo-seoul-page'
@@ -78,6 +78,7 @@ export default function WorkspaceShell({ children }) {
           <div>
             <p>{topbarLabel}</p>
           </div>
+          {topbarAction}
         </header>
         <div className="workspace-content">{children}</div>
       </section>
