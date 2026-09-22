@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { saveWorkspaceRegion } from './tourismWorkspace'
+import { readWorkspaceRegion, saveWorkspaceRegion } from './tourismWorkspace'
 import {
   ChevronDown,
   ChevronUp,
@@ -678,9 +678,12 @@ function RegionInfoModal({ visible, onClose, region, info, state, error }) {
 
 function DashboardApp() {
   // useState는 화면에서 바뀌는 값(현재 선택한 시군구, 보고서 열림 여부)을 기억하는 React 기본 기능입니다.
-  // 첫 화면은 특정 시군구가 아닌 서울특별시 전체를 기본 선택합니다.
-  const [selectedCode, setSelectedCode] = useState('11680')
-  const [selectedSidoCode, setSelectedSidoCode] = useState('11')
+  // 다른 업무에서 저장한 시군구가 있으면 그대로 이어서 열고, 없으면 기본 지원 지역을 사용합니다.
+  const [initialWorkspaceRegion] = useState(readWorkspaceRegion)
+  const [selectedCode, setSelectedCode] = useState(() => initialWorkspaceRegion.code)
+  const [selectedSidoCode, setSelectedSidoCode] = useState(() => initialWorkspaceRegion.code.slice(0, 2))
+  const [selectedRegionName, setSelectedRegionName] = useState(() => initialWorkspaceRegion.name)
+  const [isRegionSelectionConfirmed, setIsRegionSelectionConfirmed] = useState(false)
   const [isReportVisible, setIsReportVisible] = useState(false)
   const [strategyReport, setStrategyReport] = useState(null)
   // AI 전략기획은 전용 페이지에서 생성합니다. 이 대시보드에서는 생성 상태를 만들지 않습니다.
@@ -698,7 +701,9 @@ function DashboardApp() {
   const [isBoundaryLoading, setIsBoundaryLoading] = useState(true)
   const [boundaryError, setBoundaryError] = useState(false)
   const [regionDashboard, setRegionDashboard] = useState(null)
-  const [regionDashboardState, setRegionDashboardState] = useState('idle')
+  const [regionDashboardState, setRegionDashboardState] = useState(() => (
+    initialWorkspaceRegion.code ? 'loading' : 'idle'
+  ))
   // 한 달이 바뀌어도 열린 화면이 이전 예측월에 머물지 않도록, 한 시간마다 최신 대시보드 데이터를 다시 요청합니다.
   // 이 값은 화면에 표시하지 않고 API 요청 효과를 다시 실행하는 용도로만 사용합니다.
   const [dashboardRefreshTick, setDashboardRefreshTick] = useState(0)
@@ -751,12 +756,14 @@ function DashboardApp() {
   const selectedRegion = useMemo(
     () => (selectedBoundary
       ? createPendingRegion(selectedCode, selectedBoundary.properties.region_name)
+      : selectedRegionName && selectedCode
+        ? createPendingRegion(selectedCode, selectedRegionName)
       : selectedCode === '11680'
         ? createPendingRegion('11680', '서울특별시 강남구')
       : selectedSido
         ? createPendingRegion(selectedSidoCode, selectedSido.properties.region_name)
         : createPendingRegion(selectedSidoCode, selectedSidoCode === '11' ? '서울특별시' : '선택 지역')),
-    [selectedBoundary, selectedCode, selectedSido, selectedSidoCode],
+    [selectedBoundary, selectedCode, selectedRegionName, selectedSido, selectedSidoCode],
   )
 
   // 다른 업무 페이지에서도 같은 시군구를 이어서 검토할 수 있도록, 실제 시군구 선택만 저장합니다.
@@ -887,13 +894,28 @@ function DashboardApp() {
     setSelectedSidoCode(sidoCode)
     // 시도가 바뀌면 기존 시군구 선택은 해제해 "해당 시도 전체" 상태로 돌아갑니다.
     setSelectedCode('')
+    setSelectedRegionName('')
+    setIsRegionSelectionConfirmed(false)
   }
 
   const selectSigungu = (sigunguCode) => {
+    const selectedFeature = sigunguBoundaries?.features?.find(
+      (feature) => feature.properties.region_code === sigunguCode,
+    )
     clearStrategyReport()
     setRegionDashboard(null)
     setRegionDashboardState(sigunguCode ? 'loading' : 'idle')
     setSelectedCode(sigunguCode)
+    setSelectedRegionName(selectedFeature?.properties.region_name ?? '')
+    setIsRegionSelectionConfirmed(false)
+
+    if (selectedFeature) {
+      const region = {
+        code: selectedFeature.properties.region_code,
+        name: selectedFeature.properties.region_name,
+      }
+      if (saveWorkspaceRegion(region)) setIsRegionSelectionConfirmed(true)
+    }
   }
 
   const searchRegion = (event) => {
@@ -923,11 +945,27 @@ function DashboardApp() {
       setRegionDashboardState('loading')
       setSelectedSidoCode(matchedSigungu.properties.region_code.slice(0, 2))
       setSelectedCode(matchedSigungu.properties.region_code)
+      setSelectedRegionName(matchedSigungu.properties.region_name)
+      setIsRegionSelectionConfirmed(saveWorkspaceRegion({
+        code: matchedSigungu.properties.region_code,
+        name: matchedSigungu.properties.region_name,
+      }))
       setRegionSearch(matchedSigungu.properties.region_name)
       setRegionSearchMessage('')
       return
     }
     setRegionSearchMessage('일치하는 도·시·군·구를 찾지 못했습니다.')
+  }
+
+  const moveToPlanning = () => {
+    if (!isRegionSelectionConfirmed || !selectedCode || !selectedRegion.name) return
+    if (!saveWorkspaceRegion({ code: selectedCode, name: selectedRegion.name })) {
+      setIsRegionSelectionConfirmed(false)
+      return
+    }
+    window.history.pushState({}, '', '/planning')
+    window.dispatchEvent(new PopStateEvent('popstate'))
+    window.scrollTo({ top: 0 })
   }
 
   const openRegionInfo = async () => {
@@ -1013,21 +1051,41 @@ function DashboardApp() {
   }
 
   return (
-    <WorkspaceShell onOpenAssistant={() => setIsAssistantOpen(true)}>
+    <WorkspaceShell
+      onOpenAssistant={() => setIsAssistantOpen(true)}
+      topbarAction={(
+        <button type="button" className="selected-region-detail-button" onClick={openRegionInfo}>
+          <Info size={16} />
+          이 지역 핫플레이스
+        </button>
+      )}
+    >
     <div className="app-shell">
       <main id="top">
         <section className="dashboard-section dashboard-section--hero" id="dashboard">
-          <div className="selected-region-title">
-            <div className="selected-region-heading">
-              <h2>{selectedRegion.name}</h2>
-            </div>
-            <button type="button" className="selected-region-detail-button" onClick={openRegionInfo}>
-              <Info size={16} />
-              이 지역 핫플레이스
-            </button>
-          </div>
-
           <div className="dashboard-top-grid dashboard-top-grid--map-first">
+            <div className="selected-region-title">
+              <div className="selected-region-heading">
+                <h2>{selectedRegion.name}</h2>
+              </div>
+              <button
+                type="button"
+                className="region-next-step-button"
+                disabled={!isRegionSelectionConfirmed}
+                onClick={moveToPlanning}
+              >
+                저장 및 다음단계로 이동!
+              </button>
+              {/* {isRegionSelectionConfirmed && (
+                <div className="region-selection-notice" role="status">
+                  <div className="region-selection-notice-copy">
+                    <strong>{selectedRegion.name} 저장완료!</strong>
+                    <span>기획안 생성 단계로 이동하여 기획안을 생성해보세요!</span>
+                  </div>
+                </div>
+              )} */}
+            </div>
+
             <div className="dashboard-left">
               <div className="metric-grid" aria-label={`${selectedRegion.name} 핵심 지표`}>
                 {dashboardMetrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
@@ -1038,16 +1096,25 @@ function DashboardApp() {
                   <h3 className="chart-title">{regionDashboard?.forecast ? '방문자수 | 소비액 예측' : '방문자수 | 소비액'}</h3>
                 </div>
                 {/* 지역마다 원본 보유 기간이 달라도 Backend가 최신 12개월만 반환해 같은 차트 틀을 유지합니다. */}
-                <TourismTrendChart
-                  trend={regionDashboard?.monthly_trend}
-                  emptyMessage={
-                    regionDashboardState === 'unavailable'
-                      ? '이 지역의 검증된 월간 원자료가 아직 연결되지 않았습니다.'
-                      : regionDashboardState === 'idle'
-                        ? '시군구를 선택하면 최근 12개월 원자료를 표시합니다.'
-                        : '선택한 지역의 월간 원자료를 불러오는 중입니다.'
-                  }
-                />
+                {regionDashboardState === 'loading' ? (
+                  <div className="dashboard-trend-loading" role="status" aria-live="polite">
+                    <span className="strategy-job-loader" aria-hidden="true">
+                      <i />
+                      <i />
+                      <LoaderCircle size={22} />
+                    </span>
+                    <span>로딩중...</span>
+                  </div>
+                ) : (
+                  <TourismTrendChart
+                    trend={regionDashboard?.monthly_trend}
+                    emptyMessage={
+                      regionDashboardState === 'unavailable'
+                        ? '이 지역의 검증된 월간 원자료가 아직 연결되지 않았습니다.'
+                        : '시군구를 선택하면 최근 12개월 원자료를 표시합니다.'
+                    }
+                  />
+                )}
               </article>
               <div id="diagnosis"><TourismConsumptionStayDiagnostic diagnostic={regionDashboard?.diagnostic} latestMonth={regionDashboard?.latest_month} /></div>
             </div>
