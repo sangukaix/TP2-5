@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowRight, Check, CircleHelp, Coins, Layers3, LoaderCircle, Save, Sparkles } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { ArrowRight, Check, CircleHelp, Coins, Layers3, LoaderCircle, Sparkles } from 'lucide-react'
 import WorkspaceShell from '../components/WorkspaceShell'
 import RegionWorkspacePicker from '../components/RegionWorkspacePicker'
 import PlanningBriefSummary from '../features/planning/PlanningBriefSummary'
+import ByokConnectionPanel from '../components/ByokConnectionPanel'
+import { useByokConnection } from '../features/byok/useByokConnection'
 import { BUSINESS_DIRECTIONS, RESOURCE_OPTIONS, CONTEXT_OPTIONS, simplifiedDraft, nextThreeMonthSchedule, savePlanningDraft, validatePlanningBrief } from '../features/planning/planningBrief'
 import { readActiveStrategyJob, saveActiveStrategyJob, useWorkspaceRegionData } from './tourismWorkspace'
 import { getStrategyGenerationReadiness, startAiStrategyReportJob } from '../api/dashboardApi'
@@ -27,7 +30,45 @@ function Section({ number, icon: Icon, title, why, children }) {
   return <section className="planning-section"><header><span className="planning-section-icon"><Icon size={18} /></span><div><span className="planning-section-number">{number}</span><h2>{title}</h2></div><span className="planning-help" tabIndex="0" aria-label={why}><CircleHelp size={16} /><span>{why}</span></span></header>{children}</section>
 }
 
-function PlanningForm({ region, regions, dataState, saveDraft, onRegionChange, onDirtyChange, onSaveReady }) {
+function ByokKeyModal({ connection, onClose }) {
+  const inputRef = useRef(null)
+  useEffect(() => {
+    const closeOnEscape = (event) => { if (event.key === 'Escape' && !connection.busy) onClose() }
+    window.addEventListener('keydown', closeOnEscape)
+    inputRef.current?.focus()
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [connection.busy, onClose])
+
+  const save = async (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (await connection.connect()) onClose()
+  }
+  const cancel = () => {
+    if (connection.busy) return
+    connection.setApiKey('')
+    connection.clearMessage()
+    onClose()
+  }
+
+  return createPortal(<div className="byok-key-modal-backdrop" role="presentation" onMouseDown={cancel}>
+    <section className="byok-key-modal" role="dialog" aria-modal="true" aria-labelledby="byok-key-modal-title"
+      onMouseDown={(event) => event.stopPropagation()}>
+      <header><p>OpenAI BYOK 연결</p><h2 id="byok-key-modal-title">OpenAI API Key를 정확히 입력해주세요!</h2></header>
+      <form onSubmit={save}>
+        <label htmlFor="byok-key-modal-input">OpenAI API Key</label>
+        <input ref={inputRef} id="byok-key-modal-input" type="password" autoComplete="off" value={connection.apiKey}
+          onChange={(event) => connection.setApiKey(event.target.value)} placeholder="API Key 입력" />
+        <p>입력한 Key는 AI 기능 수행 중 서버 메모리에서만 일시적으로 사용되며, 120분이 지나면 서버 메모리에서도 자동 삭제됩니다!</p>
+        {connection.message && <small role="alert">{connection.message}</small>}
+        <footer><button type="button" onClick={cancel} disabled={connection.busy}>취소</button><button type="submit"
+          disabled={connection.busy}>{connection.busy ? '연결 중…' : '저장'}</button></footer>
+      </form>
+    </section>
+  </div>, document.body)
+}
+
+function PlanningForm({ region, regions, dataState, byokConnection, onRegionChange, onDirtyChange }) {
   // 입력 초안은 지역 코드별 localStorage에서 복원합니다.
   // 단, 첨부 문서 본문은 브라우저에 저장하지 않고 생성 요청 시에만 사용합니다.
   const [brief, setBrief] = useState(() => simplifiedDraft(region.code))
@@ -40,10 +81,10 @@ function PlanningForm({ region, regions, dataState, saveDraft, onRegionChange, o
     window.addEventListener('focus', refresh)
     return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh) }
   }, [])
-  const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [freshness, setFreshness] = useState({ status: 'loading', can_generate: false, message: '최신 분석 데이터를 확인하고 있습니다.' })
+  const [showByokModal, setShowByokModal] = useState(false)
   const submitting = useRef(false)
   const [dirty, setDirty] = useState(false)
   useEffect(() => {
@@ -63,25 +104,41 @@ function PlanningForm({ region, regions, dataState, saveDraft, onRegionChange, o
     return () => { active = false }
   }, [region.code, region.name])
   // 모든 입력 변경은 한 함수로 모아 저장 전 경고(dirty 상태)와 안내 문구를 일관되게 갱신합니다.
-  const update = (changes) => { setBrief((current) => ({ ...current, ...changes })); setDirty(true); setMessage(''); setError('') }
-  // 서버 요청 전에 브라우저에서도 기본 형식(금액·날짜)을 먼저 검사합니다.
-  const save = useCallback(() => {
-    const problem = validatePlanningBrief(brief)
-    if (problem) { setError(problem); return false }
-    try { savePlanningDraft({ ...brief, ...nextThreeMonthSchedule() }); setDirty(false); setMessage('이 브라우저에 기획 조건을 저장했습니다.'); setError(''); return true }
-    catch { setError('이 브라우저에 임시저장할 수 없습니다. 저장 공간과 브라우저 설정을 확인해 주세요.'); return false }
-  }, [brief])
-  // 상단의 임시저장 버튼도 같은 저장·검증 함수를 사용하도록 부모 화면에 함수를 전달합니다.
-  useEffect(() => {
-    onSaveReady?.(save)
-    return () => onSaveReady?.(null)
-  }, [onSaveReady, save])
+  const update = (changes) => { setBrief((current) => ({ ...current, ...changes })); setDirty(true); setError('') }
+  // 내부 초안 보존은 생성 직전과 Strategy 복원에 쓰이므로 수동 버튼 없이 유지합니다.
+  const persistPlanningDraft = () => {
+    try {
+      savePlanningDraft({ ...brief, ...nextThreeMonthSchedule() })
+      setDirty(false)
+      setError('')
+      return true
+    } catch {
+      setError('이 브라우저에 입력 조건을 저장할 수 없습니다. 저장 공간과 브라우저 설정을 확인해 주세요.')
+      return false
+    }
+  }
   // 생성 버튼은 장시간 걸리는 AI 작업을 서버에 등록한 뒤 /strategy로 이동합니다.
   // 중복 클릭은 submitting ref로 막고, 실제 진행 상태는 작업 ID로 복원합니다.
   const generate = async (event) => {
     event.preventDefault()
     if (!activeJob && !freshness.can_generate) { setError(freshness.message); return }
-    if (submitting.current || !save()) return
+    const problem = validatePlanningBrief(brief)
+    if (!activeJob && problem) { setError(problem); return }
+    if (!activeJob) {
+      try {
+        const byokStatus = await byokConnection.refresh()
+        if (byokStatus.capability.requires_user_api_key && !byokStatus.session.connected) {
+          setError('')
+          byokConnection.clearMessage()
+          setShowByokModal(true)
+          return
+        }
+      } catch (requestError) {
+        setError(requestError.message)
+        return
+      }
+    }
+    if (submitting.current || !persistPlanningDraft()) return
     submitting.current = true; setBusy(true)
     try {
       if (activeJob) { window.location.assign(strategyJobUrl(activeJob, region.name)); return }
@@ -99,12 +156,6 @@ function PlanningForm({ region, regions, dataState, saveDraft, onRegionChange, o
     <header className="work-page-header">
       <div><h1>{region.name}</h1></div>
       <RegionWorkspacePicker region={region} regions={regions} label="분석지역 변경" onChange={onRegionChange} />
-      <button
-        type="button"
-        className="planning-header-save"
-        disabled={!saveDraft}
-        onClick={() => saveDraft?.()}
-      ><Save size={15} />임시저장</button>
     </header>
     <div className="planning-fields">
       <fieldset disabled={busy} className="planning-fieldset">
@@ -126,21 +177,20 @@ function PlanningForm({ region, regions, dataState, saveDraft, onRegionChange, o
           <p className="planning-hint">선택 사항 · 대상 방문객과 연계 방식을 복수 선택할 수 있습니다.</p>
         </Section>
       </fieldset>
-      {/* 빈 임시저장 영역은 제거하고, 필요한 상태 안내만 입력 카드 아래에 간결하게 표시합니다. */}
-      {(error || message || dirty || dataState === 'error') && <div className="planning-inline-status" aria-live="polite">{error ? <p role="alert" className="planning-error">{error}</p> : (message || dirty) && <p>{message || '저장하지 않은 변경사항이 있습니다.'}</p>}
+       {(error || dirty || dataState === 'error' || byokConnection.capability?.requires_user_api_key) && <div className="planning-inline-status" aria-live="polite">{byokConnection.capability?.requires_user_api_key && <p className={`planning-byok-required${byokConnection.session?.connected ? ' is-connected' : ''}`}>{byokConnection.session?.connected ? 'OpenAI API Key 가 정상적으로 연결되었습니다. 기획안 AI생성을 시작하세요!' : '기획안 AI 생성을 시작하려면 OpenAI API Key를 연결해주세요.'}</p>}{error ? <p role="alert" className="planning-error">{error}</p> : dirty && <p>저장하지 않은 변경사항이 있습니다.</p>}
         {dataState === 'error' && <p className="planning-error">지역 원자료를 불러오지 못했습니다. 서버 연결을 확인해 주세요.</p>}</div>}
     </div>
     <aside className="planning-summary-column"><PlanningBriefSummary brief={brief} regionName={region.name} title="아래 조건으로 기획안 생성" />
-      {freshness.status !== 'loading' && (freshness.missing_month_count > 0 || !freshness.can_generate) && <section className={`planning-freshness ${freshness.can_generate ? '' : 'is-blocked'}`} aria-live="polite"><strong>{freshness.can_generate ? '데이터 반영 안내' : '데이터 업데이트 필요'}</strong><p>{freshness.message}</p>{Array.isArray(freshness.required_steps) && freshness.required_steps.length > 0 && <ol>{freshness.required_steps.map((step) => <li key={step}>{step}</li>)}</ol>}</section>}
+      <ByokConnectionPanel connection={byokConnection} />
       <button type="submit" disabled={!activeJob && (busy || dataState !== 'ready' || !freshness.can_generate)} className="planning-primary planning-summary-generate">{busy ? <LoaderCircle className="planning-spinner" size={16} /> : <Sparkles size={16} />}{busy ? '생성 요청 중…' : activeJob ? '생성 중인 기획안 보기' : freshness.status === 'loading' ? '데이터 확인 중…' : freshness.can_generate ? '기획안 생성' : '데이터 업데이트 후 생성'}<ArrowRight size={16} /></button></aside>
+    {showByokModal && <ByokKeyModal connection={byokConnection} onClose={() => setShowByokModal(false)} />}
   </form>
 }
 
 export default function TourismPlanningPage() {
   const { region, regions, chooseRegion, state } = useWorkspaceRegionData()
   const [dirty, setDirty] = useState(false)
-  const [saveDraft, setSaveDraft] = useState(null)
-  const registerSave = useCallback((handler) => setSaveDraft(() => handler), [])
+  const byokConnection = useByokConnection()
   // 다른 지역으로 바꾸기 전, 아직 저장하지 않은 사업 여건이 있으면 한 번 확인합니다.
   const changeRegion = (code) => {
     if (code === region.code) return
@@ -154,10 +204,9 @@ export default function TourismPlanningPage() {
         region={region}
         regions={regions}
         dataState={state}
-        saveDraft={saveDraft}
+        byokConnection={byokConnection}
         onRegionChange={changeRegion}
         onDirtyChange={setDirty}
-        onSaveReady={registerSave}
       />
     </main>
   </WorkspaceShell>

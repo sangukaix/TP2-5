@@ -4,7 +4,7 @@ import WorkspaceAssistantPanel from '../components/WorkspaceAssistantPanel'
 import WorkspaceShell from '../components/WorkspaceShell'
 import { WorkspaceConversationProvider } from '../components/WorkspaceConversationProvider'
 import StrategyPresentationPreview from '../components/StrategyPresentationPreview'
-import { downloadAiStrategyPresentation, downloadAiStrategyProposal, getAiStrategyReportJob, getStoredStrategyReport, getStoredStrategyReports, saveStoredStrategyReport } from '../api/dashboardApi'
+import { cancelAiStrategyReportJob, downloadAiStrategyPresentation, downloadAiStrategyProposal, getAiStrategyReportJob, getStoredStrategyReport, getStoredStrategyReports, saveStoredStrategyReport } from '../api/dashboardApi'
 import { clearActiveStrategyJob, downloadBlob, readActiveStrategyJob, readSavedReport, saveReport, useWorkspaceRegionData } from './tourismWorkspace'
 import { readPlanningDraft } from '../features/planning/planningBrief'
 import { applyReportPatch } from '../features/planning/applyReportPatch'
@@ -31,6 +31,7 @@ export default function TourismStrategyPage() {
   const [report, setReport] = useState(null)
   const [activeJob, setActiveJob] = useState(readStrategyJobLink)
   const [jobProgress, setJobProgress] = useState(null)
+  const [cancellingJob, setCancellingJob] = useState(false)
   const [downloadingFormat, setDownloadingFormat] = useState('')
   const [error, setError] = useState('')
   const [saveStatus, setSaveStatus] = useState({ state: 'idle' })
@@ -50,6 +51,8 @@ export default function TourismStrategyPage() {
   const loading = Boolean(currentJob)
   const progress = jobProgress?.jobId === currentJob?.job_id ? jobProgress : null
   const progressStep = progress?.step
+  const jobStatus = progress?.status || currentJob?.status || 'queued'
+  const canCancelJob = ['queued', 'running', 'cancelling'].includes(jobStatus)
   const jobMessage = progress?.message || '서버에서 현재 진행 단계를 확인하고 있습니다.'
   const planningBrief = displayReport ? displayReport.planning_brief : currentJob ? currentJob.planning_brief : readPlanningDraft(region.code)
 
@@ -105,7 +108,7 @@ export default function TourismStrategyPage() {
       try {
         const job = await getAiStrategyReportJob(region.code, currentJob.job_id)
         if (!isActive) return
-        setJobProgress({ jobId: currentJob.job_id, step: job.progress_step, message: job.message || '' })
+        setJobProgress({ jobId: currentJob.job_id, status: job.status, step: job.progress_step, message: job.message || '' })
         if (job.status === 'completed' && job.report) {
           const completed = { ...job.report, __savedEntryId: job.job_id }
           try {
@@ -133,6 +136,12 @@ export default function TourismStrategyPage() {
           clearActiveStrategyJob(region.code)
           setActiveJob(null)
           setError(job.error || job.message || 'AI 전략기획서를 생성하지 못했습니다.')
+        } else if (job.status === 'cancelled') {
+          clearStrategyJobLink()
+          clearActiveStrategyJob(region.code)
+          setActiveJob(null)
+          setCancellingJob(false)
+          setError('기획서 생성을 취소했습니다. Planning 화면에서 입력 조건을 수정한 뒤 다시 생성할 수 있습니다.')
         }
       } catch (requestError) {
         if (!isActive) return
@@ -158,6 +167,27 @@ export default function TourismStrategyPage() {
       window.removeEventListener('focus', resume)
     }
   }, [currentJob?.job_id, region.code])
+
+  const cancelGeneration = async () => {
+    if (!currentJob?.job_id || cancellingJob || !canCancelJob) return
+    if (!window.confirm('기획서 생성을 취소하시겠습니까?\n이미 사용된 AI 토큰은 되돌릴 수 없습니다.')) return
+    setCancellingJob(true)
+    setError('')
+    try {
+      const job = await cancelAiStrategyReportJob(region.code, currentJob.job_id)
+      setJobProgress({ jobId: currentJob.job_id, status: job.status, step: job.progress_step, message: job.message || '' })
+      if (job.status === 'cancelled') {
+        clearStrategyJobLink()
+        clearActiveStrategyJob(region.code)
+        setActiveJob(null)
+        setCancellingJob(false)
+        setError('기획서 생성을 취소했습니다. Planning 화면에서 입력 조건을 수정한 뒤 다시 생성할 수 있습니다.')
+      }
+    } catch (requestError) {
+      setCancellingJob(false)
+      setError(requestError.message || '취소 요청에 실패했습니다. 다시 시도해주세요.')
+    }
+  }
 
   // 실패한 저장은 화면에 남기고 재시도할 수 있습니다. 새 편집은 순서대로 저장합니다.
   const persistEdit = (stored, regionCode) => {
@@ -235,7 +265,7 @@ export default function TourismStrategyPage() {
           {saveStatus.state !== 'idle' && <p className={saveStatus.state === 'failed' ? 'work-error' : 'strategy-save-status'} role="status">{saveStatus.state === 'saving' && <LoaderCircle size={15} />}{saveStatus.state === 'saving' ? '기획서 수정 내용을 반영하고 자동 저장 중입니다…' : saveStatus.state === 'saved' ? '게시판에 자동 저장했습니다.' : `자동 저장 실패: ${saveStatus.message}`}{saveStatus.state === 'failed' && <button type="button" onClick={() => { const pending = pendingSave.current; if (pending) persistEdit(pending.report, pending.regionCode) }}>다시 저장</button>}</p>}
           {displayReport?.generation_mode === 'offline_sample' && <p className="work-error">오프라인 테스트 결과입니다. 입력 여건에 맞춘 AI 조사·기획은 실행되지 않았습니다.</p>}
           {!displayReport && !loading && <section className="strategy-start"><span><Sparkles size={21} /></span><h3>지역에 필요한 사업을 AI가 제안합니다.</h3><p>예산·일정·실행 여건을 확인한 뒤, 지역 데이터와 공식 사례를 조사해 기획안을 만듭니다. 모르는 조건은 미정으로 시작할 수 있습니다.</p></section>}
-          {loading && <section className="strategy-start strategy-start--loading"><span className="strategy-job-loader" aria-hidden="true"><i /><i /><LoaderCircle size={22} /></span><h3>기획서 초안을 생성 중입니다</h3><StrategyJobWaitingNotice key={currentJob.job_id} jobId={currentJob.job_id} startedAt={currentJob.started_at || (persistedJob?.job_id === currentJob.job_id ? persistedJob.started_at : undefined)} /><p role="status" aria-live="polite">{jobMessage}</p><div className="strategy-job-flow" aria-label="기획서 생성 진행 단계">{['데이터 분석', '공식사례 확인', '기획안 생성', '품질검토'].map((label, index) => <div className="strategy-job-stage" key={label}><span className={Number.isInteger(progressStep) && index < progressStep ? 'is-complete' : index === progressStep ? 'is-current' : ''} aria-current={index === progressStep ? 'step' : undefined}>{Number.isInteger(progressStep) && index < progressStep && <CheckCircle2 size={12} aria-hidden="true" />}{label}<b className="strategy-job-sr">{Number.isInteger(progressStep) && index < progressStep ? ' 완료' : index === progressStep ? ' 진행 중' : ' 대기'}</b></span>{index < 3 && <i className={Number.isInteger(progressStep) && index < progressStep ? 'is-complete' : ''} aria-hidden="true" />}</div>)}</div><small>다른 탭이나 페이지로 이동해도 생성은 계속됩니다. 돌아오면 진행 상태를 다시 확인합니다.</small></section>}
+          {loading && <section className="strategy-start strategy-start--loading"><span className="strategy-job-loader" aria-hidden="true"><i /><i /><LoaderCircle size={22} /></span><h3>기획서 초안을 생성 중입니다</h3><StrategyJobWaitingNotice key={currentJob.job_id} jobId={currentJob.job_id} startedAt={currentJob.started_at || (persistedJob?.job_id === currentJob.job_id ? persistedJob.started_at : undefined)} /><p role="status" aria-live="polite">{jobMessage}</p><div className="strategy-job-flow" aria-label="기획서 생성 진행 단계">{['데이터 분석', '공식사례 확인', '기획안 생성', '품질검토'].map((label, index) => <div className="strategy-job-stage" key={label}><span className={Number.isInteger(progressStep) && index < progressStep ? 'is-complete' : index === progressStep ? 'is-current' : ''} aria-current={index === progressStep ? 'step' : undefined}>{Number.isInteger(progressStep) && index < progressStep && <CheckCircle2 size={12} aria-hidden="true" />}{label}<b className="strategy-job-sr">{Number.isInteger(progressStep) && index < progressStep ? ' 완료' : index === progressStep ? ' 진행 중' : ' 대기'}</b></span>{index < 3 && <i className={Number.isInteger(progressStep) && index < progressStep ? 'is-complete' : ''} aria-hidden="true" />}</div>)}</div>{canCancelJob && <button type="button" className="strategy-job-cancel" onClick={cancelGeneration} disabled={cancellingJob || jobStatus === 'cancelling'} aria-busy={cancellingJob}>{cancellingJob || jobStatus === 'cancelling' ? '취소 중...' : '기획서 생성 취소'}</button>}<small>다른 탭이나 페이지로 이동해도 생성은 계속됩니다. 돌아오면 진행 상태를 다시 확인합니다.</small></section>}
           {displayReport && strategy && <StrategyPresentationPreview region={region} report={displayReport} planningBrief={planningBrief} onApplyPatch={applyPatch} onDownload={downloadPlan} downloadingFormat={downloadingFormat} onReset={resetEdits} onUndo={undoEdit} canReset={isModified} canUndo={historyDepth > 0} editing={saveStatus.state === 'saving'} />}
         </section>
         <WorkspaceAssistantPanel key={`${region.code}-${displayReport?.__savedEntryId || 'draft'}`} planningBrief={planningBrief} region={region} report={displayReport} onApplyPatch={applyPatch} applying={saveStatus.state === 'saving'} />

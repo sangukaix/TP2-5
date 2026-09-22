@@ -1180,12 +1180,10 @@ footer {display: flex; justify-content: space-between; gap: 20px;
   grid-template-areas: "header summary" "fields summary"; grid-template-rows: auto 1fr; align-items: start;
   column-gap: 24px; row-gap: 0; margin-top: 0}
 .workspace-content .planning-page .work-page-header {display: grid; grid-area: header;
-  grid-template-areas: "title save" "region region"; grid-template-columns: minmax(0,1fr) auto;
+  grid-template-areas: "title" "region"; grid-template-columns: minmax(0,1fr);
   align-items: center; gap: 14px 10px}
 .workspace-content .planning-page .work-page-header>:first-child {grid-area: title; min-width: 0}
 .workspace-content .planning-page .work-region-picker {grid-area: region; width: 100%; min-width: 0}
-.workspace-content .planning-page .planning-header-save {grid-area: save; justify-self: end; align-self: center;
-  margin: 0}
 .workspace-content .planning-page .planning-fields {grid-area: fields; margin-top: 24px}
 .workspace-content .planning-page .planning-summary-column {grid-area: summary}
 .work-page-header {display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
@@ -1387,9 +1385,8 @@ footer {display: flex; justify-content: space-between; gap: 20px;
   .workspace-content .planning-page .planning-layout {grid-template-columns: minmax(0,1fr);
     grid-template-areas: "header" "fields" "summary"; grid-template-rows: auto; gap: 24px}
   .workspace-content .planning-page .work-page-header {grid-template-columns: minmax(0,1fr);
-    grid-template-areas: "title save" "region region"; grid-template-columns: minmax(0,1fr) auto;
+    grid-template-areas: "title" "region";
     align-items: center; gap: 14px 10px}
-  .workspace-content .planning-page .planning-header-save {justify-self: end; align-self: center; margin: 0}
   .workspace-content .planning-page .planning-fields {margin-top: 0}
   .workspace-chat {min-height: 460px}
   .strategy-workspace>.workspace-chat, .proposal-workspace>.workspace-chat {max-width: none}
@@ -3698,15 +3695,18 @@ html[data-theme='day'] .workspace-shell.oligo-seoul-page .planning-section>heade
 html[data-theme='day'] .workspace-shell.oligo-seoul-page .planning-section-icon {color: #fff;
   background: linear-gradient(135deg,#2db7c4,#536ed0 62%,#8d6ac7)}
 html[data-theme='day'] .workspace-shell.oligo-seoul-page .planning-choice button.is-selected,
-  html[data-theme='day'] .workspace-shell.oligo-seoul-page .planning-options .planning-check:has(input:checked),
-  html[data-theme='day'] .workspace-shell.oligo-seoul-page .planning-header-save {
+  html[data-theme='day'] .workspace-shell.oligo-seoul-page .planning-options .planning-check:has(input:checked) {
+  border-color: transparent; color: #fff; background: linear-gradient(105deg,#28b4c1,#536dcf 62%,#876bc5);
+  box-shadow: 0 8px 18px #174b7860}
+/* 26.09.22_17:23 */
+html[data-theme='night'] .workspace-shell.oligo-seoul-page .planning-section-icon {color: #fff;
+  background: linear-gradient(135deg,#2db7c4,#536ed0 62%,#8d6ac7)}
+html[data-theme='night'] .workspace-shell.oligo-seoul-page .planning-choice button.is-selected,
+  html[data-theme='night'] .workspace-shell.oligo-seoul-page .planning-options .planning-check:has(input:checked) {
   border-color: transparent; color: #fff; background: linear-gradient(105deg,#28b4c1,#536dcf 62%,#876bc5);
   box-shadow: 0 8px 18px #174b7860}
 html[data-theme='day'] .workspace-shell.oligo-seoul-page .planning-options .planning-check {border-color: #d4e0ea;
   color: #60798e; background: #f4f8fb}
-html[data-theme='day'] .workspace-shell.oligo-seoul-page .planning-header-save:hover:not(:disabled) {
-  border-color: transparent; color: #fff; background: linear-gradient(105deg,#28b4c1,#536dcf 62%,#876bc5);
-  box-shadow: 0 11px 22px #174b7868}
 @media(max-width:500px){
   .workspace-global-header>div {justify-content: flex-start; padding: 0 10px}
   .workspace-global-header .home-brand-logo {height: 48px; max-width: calc(100vw - 136px)}
@@ -3818,3 +3818,68 @@ html[data-theme='day'] .workspace-shell:has(.dashboard-section) .region-selectio
 /* 26.09.22_11:55 */
 .dashboard-trend-loading {display: flex; min-height: 278px; align-items: center; justify-content: center;
   flex-direction: column; gap: 16px; color: #426d83; font-size: 2rem; font-weight: 700;}
+/* 26.09.22_15:21 */
+.byok-connection {display: grid; gap: 8px; margin-top: 12px; padding: 12px; border: 1px solid #c9d9ec;
+  border-radius: 10px; background: #f8fbff; color: #365271;}
+.byok-connection header {display: flex; align-items: center; gap: 7px; font-size: 1.2rem;}
+.byok-connection header span {margin-left: auto; color: #2563eb; font-size: 1rem; font-weight: 700;}
+.byok-connection form {display: grid; gap: 8px;}
+.byok-connection label {display: grid; gap: 5px; color: #48627e; font-size: 1rem;}
+.byok-connection input {min-width: 0; padding: 9px 10px; border: 1px solid #bdd0e5; border-radius: 7px;
+  color: #1e293b; background: #fff; font-size: 1.1rem;}
+.byok-connection button {justify-self: start; display: inline-flex; align-items: center; gap: 5px;
+  padding: 8px 10px; border: 0; border-radius: 7px; color: #fff; background: #2563eb;
+  font-size: 1rem; font-weight: 700; cursor: pointer;}
+.byok-connection button:disabled {opacity: .55; cursor: not-allowed;}
+.byok-connection p, .byok-message {margin: 0; color: #64748b; font-size: .9rem; line-height: 1.5;}
+.byok-connected {display: flex; align-items: center; justify-content: space-between; gap: 8px;}
+.byok-connection.is-compact {margin: 0 14px 8px; padding: 9px;}
+.byok-connection.is-compact header {font-size: 1.1rem;}
+.byok-connection.is-compact p {font-size: .85rem;}
+
+/* 26.09.22_15:56 */
+.strategy-start--loading .strategy-job-cancel {margin-top: 20px; border: 1px solid #dc2626; color: #b91c1c;
+  background: #fff; box-shadow: none; font-weight: 750;}
+.strategy-start--loading .strategy-job-cancel:hover:not(:disabled) {color: #991b1b; background: #fff1f2;}
+.strategy-start--loading .strategy-job-cancel:disabled {border-color: #f1a6ae; color: #b86d75;
+  background: #fff7f8; cursor: wait; opacity: 1;}
+
+/* 26.09.22_16:49 */
+.byok-key-modal-backdrop {position: fixed; z-index: 3200; inset: 0; display: grid; place-items: center;
+  padding: 18px; background: rgb(15 23 42 / 62%)}
+.byok-key-modal {width: min(560px,calc(100vw - 36px)); border: 1px solid #bcd6e7; border-radius: 16px;
+  color: #244563; background: linear-gradient(150deg,#f8fdff,#f4f7ff); box-shadow: 0 24px 60px #081a2e8c}
+.byok-key-modal>header {padding: 26px 28px 20px; border-bottom: 1px solid #d9e6ee}
+.byok-key-modal>header p {margin: 0; color: #227d9d; font-size: 1.2rem; font-weight: 800; letter-spacing: .08em}
+.byok-key-modal h2 {margin: 9px 0 0; color: #173c60; font-size: 2.4rem; line-height: 1.35; letter-spacing: -.06em}
+.byok-key-modal form {display: grid; gap: 11px; padding: 24px 28px 28px}
+.byok-key-modal label {color: #355975; font-size: 1.3rem; font-weight: 750}
+.byok-key-modal input {box-sizing: border-box; width: 100%; min-width: 0; padding: 13px 14px; border: 1px solid #a8c8dd;
+  border-radius: 9px; outline: none; color: #173c60; background: #fff; font: inherit; font-size: 1.4rem}
+.byok-key-modal input:focus {border-color: #3f95bd; box-shadow: 0 0 0 4px #49a5ca29}
+.byok-key-modal form>p {margin: 3px 0 0; color: #60798f; font-size: 1.8rem; line-height: 1.65}
+.byok-key-modal form>small {color: #b45309; font-size: 1.1rem; line-height: 1.5}
+.byok-key-modal footer {display: flex; justify-content: flex-end; gap: 9px; margin-top: 10px; padding: 0;
+  background: transparent; color: inherit; font-size: inherit}
+.byok-key-modal button {min-width: 86px; padding: 10px 14px; border: 1px solid #b7cad9; border-radius: 8px;
+  color: #355975; background: #fff; font-size: 1.2rem; font-weight: 750; cursor: pointer}
+.byok-key-modal button[type='submit'] {border-color: transparent; color: #fff;
+  background: linear-gradient(105deg,#28b4c1,#536dcf 62%,#876bc5)}
+.byok-key-modal button:disabled {cursor: wait; opacity: .6}
+html[data-theme='night'] .byok-key-modal {border-color: #37647e; color: #d7eff7;
+  background: linear-gradient(150deg,#0e3148,#172c57)}
+html[data-theme='night'] .byok-key-modal>header {border-bottom-color: #37647e}
+html[data-theme='night'] .byok-key-modal h2 {color: #f2fbff}
+html[data-theme='night'] .byok-key-modal label {color: #c6e5f0}
+html[data-theme='night'] .byok-key-modal input {border-color: #497a96; color: #e9f7fb; background: #102a40}
+html[data-theme='night'] .byok-key-modal form>p {color: #b6d2df}
+html[data-theme='night'] .byok-key-modal button:not([type='submit']) {border-color: #497a96; color: #d8eff7;
+  background: #163a54}
+@media(max-width:500px){
+  .byok-key-modal-backdrop {align-items: end; padding-bottom: 108px}
+  .byok-key-modal {width: min(100%,440px)}
+  .byok-key-modal>header {padding: 22px 20px 17px}
+  .byok-key-modal h2 {font-size: 2rem}
+  .byok-key-modal form {padding: 20px}
+  .byok-key-modal footer button {flex: 1}
+}

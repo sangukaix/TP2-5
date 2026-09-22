@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import math
 import re
@@ -181,6 +182,8 @@ class OllamaProvider:
             return parsed
 
         self._check_context(messages, request.schema, request.max_output_tokens)
+        # 첫 응답의 JSON 보정 요청 전에 event loop에 제어를 넘겨 job 취소를 먼저 반영합니다.
+        await asyncio.sleep(0)
         content, usage = await self._call(model=model, messages=messages, schema=request.schema,
                                           max_output_tokens=request.max_output_tokens)
         try:
@@ -189,6 +192,7 @@ class OllamaProvider:
             # JSON 파싱과 Schema 검증 모두 실패 시 한 번만 교정해 무한 재시도를 막습니다.
             repair_messages = messages + [{'role': 'user', 'content': '설명 없이 지정 JSON Schema에 맞는 JSON 객체만 반환하세요.'}]
             self._check_context(repair_messages, request.schema, request.max_output_tokens)
+            await asyncio.sleep(0)
             content, repair_usage = await self._call(
                 model=model,
                 messages=repair_messages,

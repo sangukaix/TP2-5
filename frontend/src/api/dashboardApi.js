@@ -25,6 +25,7 @@ export async function getSidoBoundaries() {
 export async function startAiStrategyReportJob(regionCode, options) {
   const response = await fetch(`/ai/v1/demo/${regionCode}/strategy-report/jobs`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(options),
   })
@@ -180,6 +181,7 @@ export async function getAiRegionOpenApiInfo(regionCode, regionName) {
 export async function chatWithTourismAssistant(regionCode, options) {
   const response = await fetch(`/ai/v1/demo/${regionCode}/assistant-chat`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(options),
   })
@@ -188,6 +190,49 @@ export async function chatWithTourismAssistant(regionCode, options) {
     const error = await response.json().catch(() => null)
     throw new Error(error?.detail?.message || 'AI 챗봇이 답변하지 못했습니다.')
   }
+  return response.json()
+}
+
+/** OpenAI BYOK는 password 입력 순간에만 key를 보내고 이후에는 HttpOnly session cookie만 사용합니다. */
+export async function getByokCapability() {
+  const response = await fetch('/ai/v1/byok/capability', { credentials: 'include' })
+  if (!response.ok) throw new Error('AI 연결 환경을 확인하지 못했습니다.')
+  return response.json()
+}
+
+/** 명시적으로 요청한 생성 job만 서버에서 중단합니다. 페이지 이동은 취소하지 않습니다. */
+export async function cancelAiStrategyReportJob(regionCode, jobId) {
+  const response = await fetch(`/ai/v1/demo/${regionCode}/strategy-report/jobs/${encodeURIComponent(jobId)}/cancel`, {
+    method: 'POST', credentials: 'include',
+  })
+  const result = await response.json().catch(() => null)
+  if (!response.ok) {
+    const requestError = new Error(result?.detail?.message || '취소 요청에 실패했습니다. 다시 시도해주세요.')
+    requestError.status = response.status
+    throw requestError
+  }
+  return result
+}
+
+export async function getByokSession() {
+  const response = await fetch('/ai/v1/byok/session', { credentials: 'include' })
+  if (!response.ok) throw new Error('OpenAI 연결 상태를 확인하지 못했습니다.')
+  return response.json()
+}
+
+export async function connectByokSession(openaiApiKey) {
+  const response = await fetch('/ai/v1/byok/session', {
+    method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ openai_api_key: openaiApiKey }),
+  })
+  const result = await response.json().catch(() => null)
+  if (!response.ok) throw new Error(result?.detail?.message || 'OpenAI API Key를 연결하지 못했습니다.')
+  return result
+}
+
+export async function disconnectByokSession() {
+  const response = await fetch('/ai/v1/byok/session', { method: 'DELETE', credentials: 'include' })
+  if (!response.ok) throw new Error('OpenAI 연결을 해제하지 못했습니다.')
   return response.json()
 }
 
