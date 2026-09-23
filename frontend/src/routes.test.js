@@ -10,6 +10,9 @@ test('현재 구현된 모든 페이지가 공개 경로에 연결되어 있다'
     '/planning': 'planning',
     '/strategy': 'strategy',
     '/saved-plans': 'savedPlans',
+    '/signup': 'signup',
+    '/login': 'login',
+    '/my': 'my',
     '/admin-login': 'adminLogin',
     '/ml-test': 'mlTest',
     '/openai-test': 'openAiLearning',
@@ -31,6 +34,9 @@ test('공개 화면 경로와 trailing slash를 명시적으로 해석한다', (
     found: true,
   })
   assert.equal(resolveAppRoute('/planning').pageId, 'planning')
+  assert.equal(resolveAppRoute('/signup').pageId, 'signup')
+  assert.equal(resolveAppRoute('/login').pageId, 'login')
+  assert.equal(resolveAppRoute('/my').pageId, 'my')
 })
 
 test('과거 주소는 지정된 화면으로만 연결한다', () => {

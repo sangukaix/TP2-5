@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "test": "node --test src/routes.test.js src/features/admin/*.test.js src/features/planning/*.test.js src/features/planning/*.test.mjs",
+    "test": "node --test src/routes.test.js src/features/admin/*.test.js src/features/planning/*.test.js src/features/planning/*.test.mjs src/features/regions/*.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

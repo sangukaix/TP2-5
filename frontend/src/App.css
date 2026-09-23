@@ -1054,7 +1054,7 @@ footer {display: flex; justify-content: space-between; gap: 20px;
   left: max(0px,calc((100vw - 1920px) / 2)); display: flex;
   width: 270px; box-sizing: border-box; flex-direction: column; padding: 16px; border-right: 1px solid #e2e8f0;
   background: #fff}
-.workspace-brand-wrap, .home-brand-wrap {position: relative}
+.workspace-brand-wrap {position: relative}
 .ml-learning-dot {position: absolute; z-index: 3; top: 2px; right: -3px; left: auto; width: 8px; height: 8px;
   box-sizing: border-box; border: 2px solid #fff; border-radius: 50%; background: #f97316;
   box-shadow: 0 0 0 1px #f9731645; text-decoration: none; transition: transform .15s ease,box-shadow .15s ease}
@@ -1538,8 +1538,9 @@ footer {display: flex; justify-content: space-between; gap: 20px;
 /* bid3 메인 페이지의 시각 규칙과 3D 업무 단계 캐러셀을 관광 서비스에 적용합니다. */
 .tourism-home {width: 1920px; min-width: 1920px; min-height: 100vh; margin: 0 auto; overflow-x: visible;
   color: #0f172a; background: radial-gradient(circle at 50% 20%,#fff 0,#f8fafc 46%,#f4f6f9 100%)}
-.home-header {position: sticky; z-index: 100; top: 0; border-bottom: 1px solid #e2e8f0; background: #fffffff2;
-  box-shadow: 0 1px 0 rgb(15 23 42 / 2%); backdrop-filter: blur(12px)}
+.home-header {position: sticky; z-index: 100; top: 0; border-bottom: 1px solid var(--theme-global-header-border);
+  background: var(--theme-global-header-bg); box-shadow: var(--theme-global-header-shadow);
+  backdrop-filter: blur(12px)}
 .home-header>div {display: flex; width: min(1152px,calc(100% - 32px)); height: 64px; align-items: center;
   justify-content: space-between; margin: 0 auto}
 .home-brand {display: flex; align-items: center; color: #0f172a; font-size: 1.3rem; text-decoration: none}
@@ -1605,7 +1606,6 @@ footer {display: flex; justify-content: space-between; gap: 20px;
 .home-footer span {font-size: 1rem; font-weight: 750; letter-spacing: .1em}
 .home-footer p {margin: 0; font-size: 1rem}
 @media(max-width:500px){
-  .home-header>div {height: 58px}
   .home-menu-button {display: grid}
   .home-header nav {position: absolute; top: 58px; right: 0; left: 0; display: none; box-sizing: border-box;
     flex-direction: column; align-items: stretch; padding: 10px 16px 14px; border-bottom: 1px solid #e2e8f0;
@@ -3605,24 +3605,10 @@ footer {display: flex; justify-content: space-between; gap: 20px;
   background: linear-gradient(color-mix(in srgb,var(--workspace-main-bg) 82%,transparent),
   color-mix(in srgb,var(--workspace-main-bg) 82%,transparent)),url('./assets/Seoul.png') center / cover no-repeat}
 .workspace-shell>.workspace-global-header {position: fixed; z-index: 2000; top: 0; right: auto; left: 50%;
-  width: min(1920px,100%); border-bottom-color: #2d5e79; background: var(--workspace-topbar-bg);
-  box-shadow: inset 0 -2px 4px rgb(2 24 43 / 16%),inset 0 -1px 0 rgb(255 255 255 / 22%);
-  transform: translateX(-50%)}
+  width: min(1920px,100%); transform: translateX(-50%)}
 .workspace-global-header>div {width: 100%; height: 64px; margin: 0; padding: 0 24px}
-.workspace-global-header .home-brand-wrap {display: flex; width: 100%; align-items: center}
 .workspace-global-header .home-brand-logo {width: auto; height: 58px; max-width: min(430px,calc(100vw - 180px));
   object-fit: contain}
-.theme-logo--day {display: none}
-.global-header-actions {position: absolute; top: 50%; right: 24px; display: flex; align-items: center; gap: 8px;
-  transform: translateY(-50%)}
-.global-header-actions .theme-toggle {display: inline-flex; height: 38px; align-items: center; gap: 7px;
-  padding: 0 14px; border: 1px solid rgb(104 189 220 / 58%); border-radius: 10px; color: #f8fbff;
-  background: linear-gradient(180deg,rgb(25 67 96 / 92%),rgb(10 47 75 / 94%));
-  box-shadow: 0 4px 12px rgb(0 10 30 / 28%),inset 0 1px 0 rgb(255 255 255 / 10%); font-size: 1.2rem;
-  font-weight: 700; transition: transform .18s ease,border-color .18s ease,box-shadow .18s ease}
-.global-header-actions .theme-toggle:hover {border-color: rgb(122 216 239 / 78%); color: #fff;
-  transform: translateY(-1px); box-shadow: 0 7px 18px rgb(0 11 32 / 34%),0 0 18px rgb(54 177 216 / 12%)}
-.global-header-actions .theme-toggle:focus-visible {outline: 3px solid rgb(66 205 230 / 28%); outline-offset: 3px}
 .workspace-shell.oligo-seoul-page .workspace-sidebar {border-right-color: #42677d;
   background: linear-gradient(180deg,#08233b,#0b3451 56%,#10284d);
   box-shadow: inset -1px 0 0 rgb(255 255 255 / 20%),12px 0 34px #020e1d38}
@@ -3652,37 +3638,9 @@ footer {display: flex; justify-content: space-between; gap: 20px;
 .workspace-shell.oligo-seoul-page .trend-panel-heading h3,
   .workspace-shell.oligo-seoul-page .tourism-diagnosis-heading h3 {
   color: #fff}
-html[data-theme='day'], html[data-theme='day'] body {background: #f4f7fb}
-html[data-theme='day'] .theme-logo--night {display: none}
-html[data-theme='day'] .theme-logo--day {display: block}
-html[data-theme='day'] .workspace-shell.oligo-seoul-page {
-  background: linear-gradient(135deg,#edf2f5 0%,#f3f6f8 48%,#eaf0f4 100%)}
 html[data-theme='day'] .workspace-shell.oligo-seoul-page .workspace-main {
   background: linear-gradient(135deg,rgb(237 242 245 / 94%),rgb(243 246 248 / 92%)),url('./assets/Seoul.png') center / cover fixed no-repeat}
-html[data-theme='day'] .workspace-shell>.workspace-global-header {border-bottom-color: #e2e8f0;
-  background: #fffffff2; box-shadow: 0 1px 0 rgb(15 23 42 / 2%)}
-html[data-theme='day'] .global-header-actions .theme-toggle {border-color: rgb(154 181 204 / 60%); color: #173b57;
-  background: linear-gradient(180deg,#fff,#f6fafc); box-shadow: 0 4px 12px rgb(45 79 108 / 10%)}
 html[data-theme='day'] .admin-login-link {border-color: #c7d6e1; color: #204b68; background: #fff}
-html[data-theme='day'] .workspace-shell.oligo-seoul-page .workspace-sidebar {border-right-color: #d9e2e8;
-  background: #f9fbfc; box-shadow: none}
-html[data-theme='day'] .workspace-shell.oligo-seoul-page .workspace-nav p {color: #94a3b8}
-html[data-theme='day'] .workspace-shell.oligo-seoul-page .workspace-nav a {color: #64748b}
-html[data-theme='day'] .workspace-shell.oligo-seoul-page .workspace-nav a:hover {color: #0f172a;
-  background: #f1f5f9}
-html[data-theme='day'] .workspace-shell.oligo-seoul-page .workspace-nav a.is-active {color: #fff;
-  background: linear-gradient(105deg,#1a899b,#5166c2 67%,#a96d95);
-  box-shadow: inset 3px 0 0 #8be8ef,0 8px 18px #05172e35}
-html[data-theme='day'] .workspace-shell.oligo-seoul-page .workspace-topbar {border-bottom-color: #d8e1e7;
-  color: #0f172a; background: #f9fbfc; box-shadow: 0 1px 0 rgb(15 23 42 / 3%)}
-html[data-theme='day'] .workspace-shell.oligo-seoul-page .workspace-topbar p {color: #0f172a}
-html[data-theme='day'] .workspace-shell.oligo-seoul-page .selected-region-heading h2,
-  html[data-theme='day'] .workspace-shell.oligo-seoul-page .work-page-header h1 {
-  color: #163b61; text-shadow: none}
-html[data-theme='day'] .workspace-shell.oligo-seoul-page .work-page-header {border-bottom-color: #e2e8f0}
-html[data-theme='day'] .workspace-shell.oligo-seoul-page .work-page-header span,
-  html[data-theme='day'] .workspace-shell.oligo-seoul-page .work-region-picker {
-  color: #64748b}
 html[data-theme='day'] .workspace-shell.oligo-seoul-page .panel,
   html[data-theme='day'] .workspace-shell.oligo-seoul-page .strategy-canvas,
   html[data-theme='day'] .workspace-shell.oligo-seoul-page .workspace-chat,
@@ -3709,11 +3667,7 @@ html[data-theme='day'] .workspace-shell.oligo-seoul-page .planning-options .plan
   color: #60798e; background: #f4f8fb}
 @media(max-width:500px){
   .workspace-global-header>div {justify-content: flex-start; padding: 0 10px}
-  .workspace-global-header .home-brand-logo {height: 48px; max-width: calc(100vw - 136px)}
-  .global-header-actions {right: 10px}
-  .global-header-actions .theme-toggle {width: 38px; justify-content: center; padding: 0}
-  .global-header-actions .theme-toggle span {display: none}
-  .global-header-actions .admin-login-link span {display: none}
+  .workspace-global-header .home-brand-logo {height: 48px; max-width: calc(100vw - 176px)}
 }
 .oligo-seoul-page{position:relative; isolation:isolate; min-height:100vh; overflow-x:hidden;}
 .tourism-home.oligo-seoul-page {
@@ -3724,19 +3678,15 @@ html[data-theme='day'] .workspace-shell.oligo-seoul-page .planning-options .plan
   background:linear-gradient(135deg,rgb(3 24 43 / 92%),rgb(8 48 76 / 86%) 48%,
   rgb(19 39 83 / 91%));}
 .tourism-home.oligo-seoul-page>.home-header {position: fixed; z-index: 2000; top: 0; right: auto; left: 50%;
-  width: min(1920px,100%); border-bottom-color: #2d5e79; background: #0c3450;
-  box-shadow: 0 2px 16px rgb(2 24 43 / 24%); transform: translateX(-50%)}
+  width: min(1920px,100%); transform: translateX(-50%)}
 .tourism-home.oligo-seoul-page>.home-header>div {width: 100%; height: 64px; margin: 0; padding: 0 24px}
-.tourism-home.oligo-seoul-page .home-brand-wrap {display: flex; width: 100%; align-items: center}
 .tourism-home.oligo-seoul-page .home-brand-logo {width: auto; height: 58px;
   max-width: min(430px,calc(100vw - 180px)); object-fit: contain}
 .workspace-global-header .ml-learning-dot, .tourism-home.oligo-seoul-page .ml-learning-dot {top: 5px; right: auto;
   left: 174px}
-html[data-theme='day'] .tourism-home.oligo-seoul-page>.home-header {border-bottom-color: #e2e8f0;
-  background: #fffffff2; box-shadow: 0 1px 0 rgb(15 23 42 / 3%)}
 @media(max-width:500px){
   .tourism-home.oligo-seoul-page>.home-header>div {justify-content: flex-start; padding: 0 10px}
-  .tourism-home.oligo-seoul-page .home-brand-logo {height: 48px; max-width: calc(100vw - 136px)}
+  .tourism-home.oligo-seoul-page .home-brand-logo {height: 48px; max-width: calc(100vw - 176px)}
   .workspace-global-header .ml-learning-dot, .tourism-home.oligo-seoul-page .ml-learning-dot {top: 7px;
     left: 144px}
 }
@@ -3747,9 +3697,6 @@ html[data-theme='day'] .tourism-home.oligo-seoul-page>.home-header {border-botto
   padding: 5px 10px; color: inherit; cursor: pointer;}
 
 /* 26.09.21_18:38 */
-html[data-theme='night'] .tourism-home.oligo-seoul-page::before {background: linear-gradient(to bottom,
-  rgb(3 24 43 / 98%) 0%,rgb(5 31 53 / 96%) 45%,rgb(8 48 76 / 92%) 65%,rgb(12 44 75 / 86%) 80%,
-  rgb(19 39 83 / 80%) 92%,rgb(19 39 83 / 76%) 100%)}
 .workspace-shell:has(.dashboard-section) .dashboard-top-grid--map-first>.map-panel,
 .workspace-shell:has(.dashboard-section) .dashboard-top-grid--map-first>.dashboard-left>.panel,
 .workspace-shell:has(.dashboard-section) .tourism-diagnosis {border-color: #91dce24d;
@@ -3769,23 +3716,11 @@ html[data-theme='night'] .tourism-home.oligo-seoul-page::before {background: lin
 .workspace-shell:has(.dashboard-section) .map-caption {color: #d5f0f6}
 .workspace-shell:has(.dashboard-section) .map-zoom-percent {border-color: #8acbd755; color: #315a70;
   background: #fffffff0}
-html[data-theme='day'] .workspace-shell:has(.dashboard-section) .map-selection-controls {
-  border: 1px solid #e1e9f1; border-radius: 10px; background: #f6f9fc}
 html[data-theme='day'] .workspace-shell:has(.dashboard-section) .map-region-search {border-color: #d8e3eb;
   background: #fff}
 html[data-theme='day'] .workspace-shell:has(.dashboard-section) .map-region-search button {background: #2563eb}
-html[data-theme='day'] .workspace-shell:has(.dashboard-section) .region-select-label {color: #617089}
-html[data-theme='day'] .workspace-shell:has(.dashboard-section) .region-select-label select {border-color: #d8e1ec;
-  color: #3e5574; background: #fff}
-html[data-theme='day'] .workspace-shell:has(.dashboard-section) .map-frame {border: 0; border-radius: 0;
-  box-shadow: none}
-html[data-theme='day'] .workspace-shell:has(.dashboard-section) .map-caption {color: #718199}
 html[data-theme='day'] .workspace-shell:has(.dashboard-section) .map-zoom-percent {border-color: #d7e0e9;
   color: #5d6e82; background: #fffffff0}
-html[data-theme='day'] .tourism-home {
-  background: radial-gradient(circle at 50% 20%,#fff 0%,#f8fafc 46%,#f4f6f9 100%)}
-html[data-theme='day'] .tourism-home::before,
-html[data-theme='day'] .oligo-seoul-page::before {background: transparent}
 
 /* 26.09.21_20:24 */
 .region-next-step-button {flex: 0 0 auto; padding: 8px 11px; border: 0; border-radius: 7px; color: #fff;
@@ -3882,4 +3817,254 @@ html[data-theme='night'] .byok-key-modal button:not([type='submit']) {border-col
   .byok-key-modal h2 {font-size: 2rem}
   .byok-key-modal form {padding: 20px}
   .byok-key-modal footer button {flex: 1}
+}
+
+/* 재근 - 회원가입/로그인/마이/데이나잇 버튼 작업 */
+.home-brand-wrap {position: relative; width: 100%; display: flex; align-items: center;}
+.global-header-actions{position:absolute; right:40px; top:50%; display:flex; align-items:center; gap:16px;
+  transform:translateY(-50%);}
+/* 버튼 스타일 - 나잇 모드 */
+html[data-theme='night'] .global-header-actions button{
+  position:relative;  height:44px;  padding:0 20px;  border:2px solid rgb(104 189 220 / 58%);  border-radius:12px;
+  color:#f8fbff;  font-size:16px;  font-weight:700;  letter-spacing:-0.02em;
+  background: linear-gradient(180deg,  rgb(25 67 96 / 92%) 0%,  rgb(10 47 75 / 94%) 100%);
+  box-shadow:  0 4px 12px rgb(0 10 30 / 28%),  inset 0 1px 0 rgb(255 255 255 / 10%);
+  backdrop-filter:blur(8px);   -webkit-backdrop-filter:blur(8px);
+  transition: transform .22s ease,  border-color .22s ease,  box-shadow .22s ease,  background .22s ease;  overflow:hidden;
+}
+/* 상단의 얇은 '서울 야경 불빛' 포인트 */
+html[data-theme='night'] .global-header-actions button::before{
+  content:'';  position:absolute;  top:0;  left:10px;  right:10px;  height:2px;  border-radius:0 0 999px 999px;
+  background:#46d9ea;  box-shadow: 0 0 8px rgb(70 217 234 / 70%),   0 0 16px rgb(70 217 234 / 25%);
+}
+/* 회원가입 - 청록 야경 */
+html[data-theme='night'] .global-header-actions button:nth-child(1)::before{
+  background:#39d6d7;  box-shadow: 0 0 8px rgb(57 214 215 / 75%),   0 0 16px rgb(57 214 215 / 28%);
+}
+/* 로그인 - 서울 야경 블루 */
+html[data-theme='night'] .global-header-actions button:nth-child(2)::before{
+  background:#55a6ff;  box-shadow: 0 0 8px rgb(85 166 255 / 75%),   0 0 16px rgb(85 166 255 / 26%);
+}
+/* My Page - 보라빛 도심 조명 */
+html[data-theme='night'] .global-header-actions button:nth-child(3)::before{
+  background:#8e79ea;  box-shadow: 0 0 8px rgb(142 121 234 / 70%),  0 0 16px rgb(142 121 234 / 26%);
+}
+/* Day Mode - 남산/도시의 따뜻한 불빛 */
+html[data-theme='night'] .global-header-actions button:nth-child(4)::before{
+  background:#f2b84b;  box-shadow: 0 0 8px rgb(242 184 75 / 72%),   0 0 16px rgb(242 184 75 / 24%);
+}
+/* hover */
+html[data-theme='night'] .global-header-actions button:hover{
+  transform:translateY(-2px);  border-color:rgb(122 216 239 / 58%);
+  background: linear-gradient(180deg,  rgb(32 82 113 / 96%) 0%,  rgb(12 55 85 / 98%) 100%);
+  box-shadow: 0 7px 18px rgb(0 11 32 / 34%),  0 0 18px rgb(54 177 216 / 12%),  inset 0 1px 0 rgb(255 255 255 / 14%);
+}
+/* active */
+html[data-theme='night'] .global-header-actions button:active{
+  transform:translateY(0);  box-shadow: 0 3px 8px rgb(0 10 30 / 28%),  inset 0 2px 5px rgb(0 0 0 / 18%);
+}
+/* focus */
+html[data-theme='night'] .global-header-actions button:focus-visible{
+  outline:3px solid rgb(66 205 230 / 22%); outline-offset:3px;
+}
+/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
+/* 버튼 스타일 - 데이 모드 */
+html[data-theme='day'] .global-header-actions button{
+  position:relative;  height:44px;  padding:0 20px;  border:2px solid rgb(154 181 204 / 60%);  border-radius:12px;
+  color:#173b57;  font-size:16px;  font-weight:700;  letter-spacing:-0.02em;
+  background: linear-gradient(180deg,  rgb(255 255 255 / 98%) 0%,  rgb(246 250 252 / 98%) 100%);
+  box-shadow: 0 4px 12px rgb(45 79 108 / 10%),  inset 0 1px 0 rgb(255 255 255 / 100%);
+  backdrop-filter:blur(8px);  -webkit-backdrop-filter:blur(8px);  overflow:hidden;
+  transition:  transform .22s ease,  border-color .22s ease,  box-shadow .22s ease,  background .22s ease;}
+/* 상단의 얇은 '낮빛 / 단청 포인트' */
+html[data-theme='day'] .global-header-actions button::before{
+  content:'';  position:absolute;  top:0; left:10px; right:10px;  height:2px; border-radius:0 0 999px 999px;
+  background:#2eb7c4;   box-shadow: 0 0 6px rgb(46 183 196 / 38%),  0 0 12px rgb(46 183 196 / 14%);}
+/* 회원가입 - 청자 / 맑은 청록빛 */
+html[data-theme='day'] .global-header-actions button:nth-child(1)::before{
+  background:#24aeb8;  box-shadow:  0 0 6px rgb(36 174 184 / 42%),  0 0 12px rgb(36 174 184 / 16%);}
+/* 로그인 - 맑은 서울 하늘 / 쪽빛 */
+html[data-theme='day'] .global-header-actions button:nth-child(2)::before{
+  background:#4387ce;  box-shadow:  0 0 6px rgb(67 135 206 / 40%),  0 0 12px rgb(67 135 206 / 14%);}
+/* My Page - 은은한 자색 / 전통 보라 계열 */
+html[data-theme='day'] .global-header-actions button:nth-child(3)::before{
+  background:#806fbd;  box-shadow:  0 0 6px rgb(128 111 189 / 36%), 0 0 12px rgb(128 111 189 / 13%);}
+/* Night Mode - 따뜻한 황금빛 / 햇빛·단청 포인트 */
+html[data-theme='day'] .global-header-actions button:nth-child(4)::before{
+  background:#d69b39;  box-shadow:  0 0 6px rgb(214 155 57 / 42%),  0 0 12px rgb(214 155 57 / 15%);}
+/* Hover */
+html[data-theme='day'] .global-header-actions button:hover{
+  transform:translateY(-2px);  border-color:rgb(88 153 190 / 58%);
+  background: linear-gradient(180deg,  #fffef9 0%,  #f7faef 50%,  #eef5e6 100%);
+  box-shadow: 0 7px 18px rgb(37 72 101 / 14%), 0 0 18px rgb(67 169 194 / 9%),  inset 0 1px 0 #ffffff;}
+/* Active */
+html[data-theme='day'] .global-header-actions button:active{
+  transform:translateY(0);  background: linear-gradient(180deg, #f5f9fb 0%, #edf3f6 100%);
+  box-shadow: 0 3px 8px rgb(39 71 95 / 11%),  inset 0 2px 5px rgb(42 70 88 / 7%);}
+/* Focus */
+html[data-theme='day'] .global-header-actions button:focus-visible{
+  outline:3px solid rgb(42 174 193 / 20%);  outline-offset:3px;}
+
+.account-header{position:relative; z-index:10; height:84px; box-sizing:border-box; border:0; background:transparent;
+  box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none;}
+.signup-header .account-header-inner{width:min(720px,calc(100% - 40px)); margin:0 auto; padding:0; grid-template-columns:1fr;}
+.login-header .account-header-inner{width:min(720px,calc(100% - 40px)); margin:0 auto; padding:0; grid-template-columns:1fr;}
+.my-header .account-header-inner{width:min(720px,calc(100% - 40px)); margin:0 auto; padding:0; grid-template-columns:1fr;}
+.signup-header .account-header-logo,
+.login-header .account-header-logo,
+.my-header .account-header-logo{grid-column:1; width:100%;}
+.account-header-inner{display:grid; width:100%; height:100%; box-sizing:border-box;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; padding:0 24px;}
+.account-header-logo{display:grid; grid-column:2; height:84px; place-items:center; justify-self:center; padding:0;}
+.account-logo{display:block; width:auto; height:80px; max-width:calc(100vw - 40px); max-height:80px;
+  margin:2px; padding:0; border-radius:0; clip-path:none; object-fit:contain;
+  -webkit-mask-image:none; mask-image:none;}
+.account-header .global-header-actions{position:static; grid-column:3; justify-self:start; align-self:center;
+  margin-left:16px; transform:none;}
+@media (min-width:501px) and (max-width:870px){
+  .global-header-actions{right:calc(100vw - 830px);}
+}
+@media(max-width:500px){
+  :root{--mobile-global-header-height:104px;}
+  .home-header,
+  .workspace-shell>.workspace-global-header{height:var(--mobile-global-header-height); box-sizing:border-box;}
+  .home-header>div,
+  .workspace-global-header>div{height:100%;}
+  .home-brand-wrap{height:100%; box-sizing:border-box; flex-direction:column; align-items:center;
+    justify-content:flex-start; gap:0; padding-top:4px;}
+  .home-brand-wrap .home-brand-logo{margin:0 2px;}
+  .home-brand-wrap .global-header-actions{position:static; right:auto; top:auto; width:100%; box-sizing:border-box;
+    justify-content:center; gap:4px; padding:0 4px; transform:none;}
+  .account-header{height:var(--mobile-global-header-height);}
+  .signup-header .account-header-inner,
+  .login-header .account-header-inner,
+  .my-header .account-header-inner{display:block; width:calc(100% - 28px); margin:0 auto;}
+  .account-header-inner{grid-template-columns:minmax(0,1fr); grid-template-rows:72px 30px;
+    justify-items:center; align-content:center; row-gap:4px; padding:0;}
+  .account-header-logo{grid-column:1; grid-row:1; height:72px;}
+  .signup-header .account-header-logo,
+  .login-header .account-header-logo,
+  .my-header .account-header-logo{display:block; margin:0 auto;}
+  .account-logo{height:68px; max-height:68px;}
+  .account-header .global-header-actions{position:static; grid-column:1; grid-row:2; justify-self:center;
+    width:100%; box-sizing:border-box; justify-content:center; gap:4px; margin-left:0; padding:0 4px; transform:none;}
+  .global-header-actions button{min-width:0; height:30px; flex:0 1 auto; padding:0 5px; border-width:1px;
+    font-size:9px; white-space:nowrap;}
+  /* HeaderActions가 있는 Home/Workspace의 고정 헤더와 본문 offset을 동일하게 유지합니다. */
+  .tourism-home,
+  .workspace-shell{padding-top:var(--mobile-global-header-height);}
+}
+/* 계정 페이지 로고는 wrapper가 아니라 실제 이미지가 본문 폭을 모두 사용합니다. */
+.signup-header.account-header,
+.login-header.account-header,
+.my-header.account-header{height:auto; min-height:0;}
+.signup-header .account-header-inner,
+.login-header .account-header-inner,
+.my-header .account-header-inner{height:auto; min-height:0;}
+.signup-header .account-header-logo,
+.login-header .account-header-logo,
+.my-header .account-header-logo{height:auto; min-height:0; width:100%;}
+.signup-header .account-header-logo .account-logo,
+.login-header .account-header-logo .account-logo,
+.my-header .account-header-logo .account-logo{
+  width:100%; height:auto; max-width:none; max-height:none;
+  margin:0; object-fit:contain;
+}
+/* 전역 테마는 HTML data-theme 속성만으로 판단합니다. */
+html[data-theme='night']{
+  --theme-outer-bg:#f4f7fb;
+  --theme-global-header-bg:#0c3450;
+  --theme-global-header-border:#2d5e79;
+  --theme-global-header-shadow:0 2px 16px rgb(2 24 43 / 24%);
+}
+html[data-theme='night'] .tourism-home.oligo-seoul-page::before {
+  background:linear-gradient(
+    to bottom,
+    rgb(3 24 43 / 98%) 0%,
+    rgb(5 31 53 / 96%) 45%,
+    rgb(8 48 76 / 92%) 65%,
+    rgb(12 44 75 / 86%) 80%,
+    rgb(19 39 83 / 80%) 92%,
+    rgb(19 39 83 / 76%) 100%
+  );
+}
+html[data-theme='day']{
+  --theme-outer-bg:#f4f7fb;
+  --theme-global-header-bg:#fffffff2;
+  --theme-global-header-border:#e2e8f0;
+  --theme-global-header-shadow:0 1px 0 rgb(15 23 42 / 2%);
+  --theme-workspace-topbar-bg:#f9fbfc;
+  --theme-workspace-sidebar-bg:#f9fbfc;
+  --theme-workspace-main-bg:linear-gradient(135deg,#edf2f5 0%,#f3f6f8 48%,#eaf0f4 100%);
+  --theme-home-main-bg:radial-gradient(circle at 50% 20%,#fff 0%,#f8fafc 46%,#f4f6f9 100%);
+}
+html[data-theme='day'],
+html[data-theme='day'] body{background:var(--theme-outer-bg);}
+html[data-theme='day'] .tourism-home{--theme-global-header-bg:#fff; background:var(--theme-home-main-bg);}
+html[data-theme='day'] .tourism-home::before,
+html[data-theme='day'] .oligo-seoul-page::before{background:transparent;}
+html[data-theme='day'] .workspace-shell{background:var(--theme-workspace-main-bg);}
+html[data-theme='day'] .workspace-shell .workspace-sidebar{
+  border-right-color:#d9e2e8; background:var(--theme-workspace-sidebar-bg); box-shadow:none;
+}
+html[data-theme='day'] .workspace-shell .workspace-nav p{color:#94a3b8;}
+html[data-theme='day'] .workspace-shell .workspace-nav a{color:#64748b;}
+html[data-theme='day'] .workspace-shell .workspace-nav a:hover{color:#0f172a; background:#f8fafc;}
+html[data-theme='day'] .workspace-shell .workspace-nav a.is-active {
+  color: #fff; background: linear-gradient(105deg, #1a899b, #5166c2 67%, #a96d95); font-weight: 650;
+  box-shadow: inset 3px 0 0 #8be8ef, 0 8px 18px #05172e55;}
+html[data-theme='day'] .workspace-shell .workspace-topbar{
+  border-bottom-color:#d8e1e7; color:#0f172a; background:var(--theme-workspace-topbar-bg);
+  box-shadow:0 1px 0 rgb(15 23 42 / 3%);
+}
+html[data-theme='day'] .workspace-shell .workspace-topbar p{color:#0f172a;}
+html[data-theme='day'] .workspace-shell .workspace-main,
+html[data-theme='day'] .workspace-shell .workspace-content{background:transparent;}
+html[data-theme='day'] .workspace-shell .selected-region-heading h2,
+html[data-theme='day'] .workspace-shell .work-page-header h1{color:#163b61; text-shadow:none;}
+html[data-theme='day'] .workspace-shell .work-page-header span,
+html[data-theme='day'] .workspace-shell .work-region-picker{color:#64748b;}
+html[data-theme='day'] .workspace-shell .work-page-header{border-bottom-color:#e2e8f0;}
+html[data-theme='day'] .workspace-shell .work-region-picker select{
+  border-color:#cbd5e1; color:#334155; background:#fff;
+}
+html[data-theme='day'] .theme-logo--night,
+.theme-logo--day{display:none;}
+html[data-theme='day'] .theme-logo--day{display:block;}
+html[data-theme='day'] .workspace-shell:has(.dashboard-section) .dashboard-top-grid--map-first>.map-panel{
+  border-color:#e1e7ef; background:#fff; box-shadow:0 1px 2px rgb(15 23 42 / 4%);
+}
+html[data-theme='day'] .workspace-shell:has(.dashboard-section) .map-selection-controls{
+  border:1px solid #e1e9f1; border-radius:10px; background:#f6f9fc;
+}
+html[data-theme='day'] .workspace-shell:has(.dashboard-section) .region-picker-label{color:#617089;}
+html[data-theme='day'] .workspace-shell:has(.dashboard-section) .region-picker-toggle{border-color:rgb(154 181 204 / 60%); color:#173b57; background:linear-gradient(180deg,rgb(255 255 255 / 98%) 0%,rgb(246 250 252 / 98%) 100%);}
+html[data-theme='day'] .workspace-shell:has(.dashboard-section) .region-select-label{color:#617089;}
+html[data-theme='day'] .workspace-shell:has(.dashboard-section) .region-select-label select{
+  color:#3e5574; background:#fff; border:1px solid #d8e1ec;
+}
+html[data-theme='day'] .workspace-shell:has(.dashboard-section) .map-frame{
+  border:0; border-radius:0; box-shadow:none;
+}
+html[data-theme='day'] .workspace-shell:has(.dashboard-section) .map-caption{color:#718199;}
+@media(max-width:500px){
+  html[data-theme='day'] .workspace-shell .workspace-mobile-nav{
+    border-top-color:#d9e2e8; background:#f9fbfc;
+  }
+  html[data-theme='day'] .workspace-shell .workspace-mobile-nav a,
+  html[data-theme='day'] .workspace-shell .workspace-mobile-nav button{color:#64748b;}
+  html[data-theme='day'] .workspace-shell .workspace-mobile-nav .is-active{
+    color:#1d4ed8; background:#eff6ff;
+  }
+}
+html[data-theme='day'] .login-page{background:var(--theme-outer-bg);}
+html[data-theme='day'] .login-page::before{background:transparent;}
+
+/* 26.09.23_14:34 */
+.global-header-actions button{display:inline-flex; align-items:center; justify-content:center; gap:7px;}
+.global-header-actions .account-action:disabled{cursor:not-allowed;}
+@media(max-width:500px){
+  .global-header-actions .theme-toggle{width:30px;}
+  .global-header-actions .theme-toggle span,
+  .global-header-actions .admin-login-link span{display:none;}
 }

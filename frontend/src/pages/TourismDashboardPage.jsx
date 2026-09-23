@@ -27,7 +27,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { downloadAiStrategyPresentation, downloadAiStrategyProposal, getAiRegionDashboard, getAiRegionOpenApiInfo, getSidoBoundaries, getSigunguBoundaries, getRegionReadinessAudit } from '../api/dashboardApi'
+import { downloadAiStrategyPresentation, downloadAiStrategyProposal, getAiRegionDashboard, getAiRegionOpenApiInfo, getRegionReadinessAudit } from '../api/dashboardApi'
+import { getSidoBoundaries, getSigunguBoundaries } from '../features/regions/regionCatalog'
 import TourismAssistant from '../components/TourismAssistant'
 import ConsumptionCategoryHelp from '../components/ConsumptionCategoryHelp'
 import { regionReadinessLabel, regionDataReady } from '../features/planning/regionReadinessLabel'
