@@ -1,6 +1,6 @@
 @import 'leaflet/dist/leaflet.css';
 :root {color: #172b4d; background: #f4f7fb;
-  font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif; font-synthesis: none;}
+  font-family: 'Malgun Gothic', Arial, sans-serif; font-synthesis: none;}
 * {box-sizing: border-box;}
 html {font-size: 62.5%; scroll-behavior: smooth;}
 body {margin: 0; min-width: 1920px; background: #f4f7fb;}
