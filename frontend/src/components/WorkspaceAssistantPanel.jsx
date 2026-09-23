@@ -1,7 +1,9 @@
 import { Bot, Globe2, LoaderCircle, Send } from 'lucide-react'
+import { useState } from 'react'
 import { useWorkspaceConversation } from './workspaceConversationContext'
 import { chatWithTourismAssistant } from '../api/dashboardApi'
 import { chatHistory } from '../features/planning/chatHistory'
+import ByokConnectionPanel from './ByokConnectionPanel'
 
 // 처음 보는 사용자가 질문 범위를 이해할 수 있도록 보여 주는 안내 예시입니다.
 // 클릭 시 바로 질문을 보내지 않으며, 사용자가 자신의 문장으로 작성합니다.
@@ -15,12 +17,16 @@ const QUICK_QUESTIONS = [
 export default function WorkspaceAssistantPanel({ region, report, onApplyPatch, planningBrief, applying = false }) {
   const { messages, setMessages, question, setQuestion, useWebSearch, setUseWebSearch,
     appliedPatch, setAppliedPatch, loading, setLoading, error, setError, beginRequest, endRequest } = useWorkspaceConversation()
+  const [byokSession, setByokSession] = useState(null)
 
   // 질문을 API에 보내고, 최근 8개 대화만 함께 전달합니다.
   // 기록 길이를 제한하면 토큰 비용과 응답 지연을 일정하게 유지할 수 있습니다.
   const ask = async (preset) => {
     const content = String(preset || question).trim()
     if (!content || !beginRequest()) return
+    if (byokSession?.runtime_mode === 'openai_byok' && !byokSession.connected) {
+      setError('AI 챗봇을 사용하려면 OpenAI API Key를 다시 연결해주세요.'); endRequest(); return
+    }
     const history = [...messages, { role: 'user', content }]
     setMessages(history)
     setQuestion('')
@@ -51,6 +57,7 @@ export default function WorkspaceAssistantPanel({ region, report, onApplyPatch, 
   return <aside className="workspace-chat" aria-label="AI 챗봇">
     <header><span><Bot size={17} /></span><div><b>AI 챗봇</b></div><em>{loading ? '응답 중' : error ? '요청 실패' : '질문 대기'}</em></header>
     <p className="workspace-chat-intro">현재 아이디어의 목표 KPI·예상 견적·문장·실행 단계를 조정하세요. 다른 사업은 근거가 연결된 후보 안에서 비교할 수 있습니다.</p>
+    <ByokConnectionPanel compact onChange={setByokSession} />
     <div className="workspace-chat-messages">
       {messages.length === 0 && <div className="workspace-chat-empty">{QUICK_QUESTIONS.map((item) => <p key={item}>{item}</p>)}</div>}
       {messages.map((message, index) => (
@@ -73,6 +80,6 @@ export default function WorkspaceAssistantPanel({ region, report, onApplyPatch, 
       {error && <p className="workspace-chat-error">{error}</p>}
     </div>
     {report && latestPatch && onApplyPatch && <button className="workspace-chat-apply" type="button" disabled={loading || applying || appliedPatch === latestPatch} onClick={() => { onApplyPatch(latestPatch); setAppliedPatch(latestPatch) }}>{applying ? <><LoaderCircle size={14} />기획서 수정 중…</> : appliedPatch === latestPatch ? '반영됨 · 자동 저장 상태 확인' : '이 수정안을 기획안에 반영'}</button>}
-    <footer className="workspace-chat-composer"><label title={useWebSearch ? '지역명과 이번 질문만 OpenAI 웹 검색에 사용합니다. 수정 반영은 검색을 끄고 요청하세요.' : '현재 보고서 수정은 관리자 Router에 설정된 로컬 모델을 사용합니다.'}><input type="checkbox" checked={useWebSearch} onChange={(event) => setUseWebSearch(event.target.checked)} /><Globe2 size={13} />웹 검색 {useWebSearch ? 'ON' : 'OFF'}</label><div><textarea rows="2" value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); ask() } }} placeholder={useWebSearch ? '공식 자료를 웹에서 찾아 질문하세요.' : '기획안 수정 내용을 입력하세요.'} /><button type="button" onClick={() => ask()} disabled={!question.trim() || loading} aria-label="질문 전송"><Send size={15} /></button></div></footer>
+    <footer className="workspace-chat-composer"><label title={useWebSearch ? '지역명과 이번 질문만 OpenAI 웹 검색에 사용합니다. 수정 반영은 검색을 끄고 요청하세요.' : '현재 보고서 수정은 관리자 Router에 설정된 로컬 모델을 사용합니다.'}><input type="checkbox" checked={useWebSearch} onChange={(event) => setUseWebSearch(event.target.checked)} /><Globe2 size={13} />웹 검색 {useWebSearch ? 'ON' : 'OFF'}</label><div><textarea rows="2" value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); ask() } }} placeholder={useWebSearch ? '공식 자료를 웹에서 찾아 질문하세요.' : '기획안 수정 내용을 입력하세요.'} /><button type="button" onClick={() => ask()} disabled={!question.trim() || loading || (byokSession?.runtime_mode === 'openai_byok' && !byokSession.connected)} aria-label="질문 전송"><Send size={15} /></button></div></footer>
   </aside>
 }

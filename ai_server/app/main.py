@@ -14,17 +14,18 @@ from pathlib import Path
 from typing import Any, Literal
 
 import httpx
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import Cookie, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 from .openai_responses import OpenAIResponseError, check_openai_readiness
 from .llm.errors import LLMProviderError
 from .llm.router import LLMRouter
 from .llm.trace_store import recent_trace, usage_summary
 from .runtime_env import load_project_env
+from .byok import ByokCredentialVault, ByokSessionError
 from .offline_sample_report import build_offline_sample_report
 from .proposal_document import create_strategy_proposal_document
 from .proposal_presentation import PRESENTATION_RENDER_VERSION, create_strategy_proposal_presentation
@@ -90,7 +91,36 @@ def _render_strategy_document(payload: dict[str, Any], file_format: str) -> byte
 
 app = FastAPI(title='STAY-UP AI Server', version='0.1.0')
 app.add_middleware(GZipMiddleware, minimum_size=1024)
-app.add_middleware(CORSMiddleware, allow_origins=['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:5175', 'http://127.0.0.1:5175', 'http://localhost:5176', 'http://127.0.0.1:5176'], allow_methods=['POST', 'GET', 'PUT'], allow_headers=['*'])
+app.add_middleware(CORSMiddleware, allow_origins=['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:5175', 'http://127.0.0.1:5175', 'http://localhost:5176', 'http://127.0.0.1:5176'], allow_methods=['POST', 'GET', 'PUT', 'DELETE'], allow_headers=['*'], allow_credentials=True)
+
+BYOK_COOKIE_NAME = 'oligo_byok_session'
+BYOK_VAULT = ByokCredentialVault(ttl_seconds=int(ENV_VALUES.get('BYOK_SESSION_TTL_SECONDS') or 7200))
+
+
+def _ai_runtime_mode() -> str:
+    return str(ENV_VALUES.get('AI_RUNTIME_MODE') or 'local_ollama').strip().lower()
+
+
+def _is_openai_byok_mode() -> bool:
+    return _ai_runtime_mode() == 'openai_byok'
+
+
+def _is_https_or_local(request: Request) -> bool:
+    host = (request.url.hostname or '').lower()
+    if host in {'localhost', '127.0.0.1', '::1'}:
+        return True
+    return request.url.scheme == 'https' or request.headers.get('x-forwarded-proto', '').lower() == 'https'
+
+
+async def _request_ai_env(session_id: str | None) -> dict[str, Any]:
+    """BYOK 운영에서는 명시적으로 꺼낸 사용자 키만 Agent에 전달합니다."""
+    if not _is_openai_byok_mode():
+        return ENV_VALUES
+    try:
+        api_key = await BYOK_VAULT.require_session_credential(session_id)
+    except ByokSessionError as exc:
+        raise HTTPException(status_code=401, detail={'code': exc.code, 'message': exc.message}) from exc
+    return {**ENV_VALUES, 'OPENAI_API_KEY': api_key, 'AI_RUNTIME_MODE': 'openai_byok'}
 
 
 @app.on_event('startup')
@@ -102,10 +132,18 @@ async def initialize_mysql_strategy_store() -> None:
     """
     try:
         initialize_strategy_store()
-        # 프로세스 재시작 전에 실행 중이던 작업은 MySQL 요청을 읽어 다시 예약합니다.
+        # BYOK credential은 메모리에만 존재하므로 production 재시작 뒤에는 팀 키로
+        # 재개하지 않습니다. 로컬 Ollama 작업만 기존처럼 복구할 수 있습니다.
         # 첨부문서 본문은 저장하지 않으므로 첨부가 있던 작업은 안전하게 실패 처리합니다.
         for stored_job in list_interrupted_strategy_jobs():
             job_id = stored_job['job_id']
+            if _is_openai_byok_mode():
+                message = 'AI 서버가 재시작되어 OpenAI API Key 세션이 만료되었습니다. API Key를 다시 연결한 뒤 생성해 주세요.'
+                update_strategy_job_state(job_id, 'failed', message, 'BYOK_SESSION_EXPIRED')
+                STRATEGY_REPORT_JOBS[job_id] = {
+                    **stored_job, 'status': 'failed', 'message': message, 'error': 'BYOK_SESSION_EXPIRED',
+                }
+                continue
             if stored_job.get('had_transient_references'):
                 message = 'AI 서버가 재시작되어 첨부문서가 있던 작업은 자동 재개할 수 없습니다. 다시 생성해 주세요.'
                 update_strategy_job_state(job_id, 'failed', message, 'TRANSIENT_REFERENCE_LOST')
@@ -124,9 +162,26 @@ async def initialize_mysql_strategy_store() -> None:
                 'status': 'queued', 'message': 'AI 서버 재시작 후 작업을 다시 이어갑니다.', 'error': '',
             }
             update_strategy_job_state(job_id, 'queued', 'AI 서버 재시작 후 작업을 다시 이어갑니다.')
-            asyncio.create_task(_run_strategy_report_job(job_id, stored_job['region_code'], request))
+            cancellation_event = asyncio.Event()
+            STRATEGY_REPORT_CANCELLATIONS[job_id] = cancellation_event
+            STRATEGY_REPORT_TASKS[job_id] = asyncio.create_task(
+                _run_strategy_report_job(
+                    job_id, stored_job['region_code'], request, cancellation_event=cancellation_event,
+                ),
+            )
     except Exception as exc:
         LOGGER.warning('MySQL strategy store is unavailable: %s', type(exc).__name__)
+
+
+@app.on_event('shutdown')
+async def clear_byok_credentials() -> None:
+    for cancellation_event in STRATEGY_REPORT_CANCELLATIONS.values():
+        cancellation_event.set()
+    for task in STRATEGY_REPORT_TASKS.values():
+        task.cancel()
+    STRATEGY_REPORT_CANCELLATIONS.clear()
+    STRATEGY_REPORT_TASKS.clear()
+    await BYOK_VAULT.clear()
 
 
 class ReportRequest(BaseModel):
@@ -134,6 +189,10 @@ class ReportRequest(BaseModel):
 
     region_name: str
     planning_brief: PlanningBrief | None = None
+
+
+class ByokSessionCreateRequest(BaseModel):
+    openai_api_key: SecretStr
 
 
 class StrategyMeasurementFollowupRequest(BaseModel):
@@ -265,7 +324,7 @@ class StrategyReportJobResponse(BaseModel):
     job_id: str
     region_code: str
     region_name: str
-    status: Literal['queued', 'running', 'completed', 'failed']
+    status: Literal['queued', 'running', 'cancelling', 'cancelled', 'completed', 'failed']
     message: str
     report: ReportResponse | None = None
     error: str = ''
@@ -276,6 +335,9 @@ class StrategyReportJobResponse(BaseModel):
 # 브라우저 요청과 별개로 실행되는 개발용 작업 저장소입니다.
 # 완료 결과는 프런트엔드가 localStorage의 저장 기획서 목록으로 옮겨 보관합니다.
 STRATEGY_REPORT_JOBS: dict[str, dict[str, Any]] = {}
+# 각 생성 작업의 취소 상태와 실행 task를 분리해 다른 사용자의 작업에 영향을 주지 않습니다.
+STRATEGY_REPORT_TASKS: dict[str, asyncio.Task[None]] = {}
+STRATEGY_REPORT_CANCELLATIONS: dict[str, asyncio.Event] = {}
 
 
 class AssistantChatMessage(BaseModel):
@@ -1195,8 +1257,10 @@ def _output_text(payload: dict[str, Any]) -> str:
     raise ValueError('OpenAI 응답에서 보고서 텍스트를 찾지 못했습니다.')
 
 
-async def generate_report(request: ReportRequest) -> ReportResponse:
-    api_key = (ENV_VALUES.get('OPENAI_API_KEY') or '').strip()
+async def generate_report(request: ReportRequest, *, env_values: dict[str, Any] | None = None) -> ReportResponse:
+    if _is_openai_byok_mode() and env_values is None:
+        raise HTTPException(status_code=401, detail={'code': 'BYOK_SESSION_REQUIRED', 'message': 'OpenAI API Key를 연결해주세요.'})
+    api_key = ((env_values or ENV_VALUES).get('OPENAI_API_KEY') or '').strip()
     if not api_key:
         raise HTTPException(status_code=503, detail={'code': 'OPENAI_KEY_MISSING', 'message': 'AI 서버의 OpenAI 키가 설정되지 않았습니다.'})
     snapshot = build_region_snapshot(request.region_name)
@@ -1261,22 +1325,25 @@ async def generate_orchestrated_report(
     request: ReportRequest,
     *,
     snapshot: dict[str, Any] | None = None,
+    env_values: dict[str, Any] | None = None,
+    cancellation_event: asyncio.Event | None = None,
 ) -> ReportResponse:
     """지역 근거→공식 사례→적합성→기획→품질 검토 Agent를 고정 순서로 실행합니다."""
     if request.planning_brief and request.planning_brief.region_code != region_code:
         raise HTTPException(status_code=422, detail={'code': 'BRIEF_REGION_MISMATCH', 'message': '기획 조건의 지역과 선택 지역이 다릅니다.'})
     brief = request.planning_brief.model_dump(mode='json') if request.planning_brief else None
-    api_key = (ENV_VALUES.get('OPENAI_API_KEY') or '').strip()
+    runtime_env = env_values or ENV_VALUES
     snapshot = snapshot or build_region_snapshot(request.region_name)
     _raise_if_strategy_generation_is_stale(snapshot)
     try:
         result = await orchestrate_strategy_report(
             project_root=PROJECT_ROOT,
-            env_values=ENV_VALUES,
+            env_values=runtime_env,
             region_code=region_code,
             snapshot=snapshot,
             report_schema=REPORT_SCHEMA,
             planning_brief=brief,
+            cancellation_event=cancellation_event,
         )
         # Targets come from explicit user conditions, never from generated JSON.
         result['report']['execution_scenario'] = (
@@ -1323,8 +1390,11 @@ def _persist_completed_strategy_report(
     region_code: str,
     report: ReportResponse,
     snapshot: dict[str, Any] | None = None,
+    cancellation_event: asyncio.Event | None = None,
 ) -> list[str]:
     """완료된 기획안을 MySQL과 로컬 서버 문서 폴더에 한 번만 영구 저장합니다."""
+    if cancellation_event and cancellation_event.is_set():
+        raise asyncio.CancelledError('Strategy report persistence was cancelled.')
     payload = report.model_dump(mode='json')
     save_strategy_report(job_id, region_code, payload)
     warnings = []
@@ -1337,6 +1407,8 @@ def _persist_completed_strategy_report(
             warnings.append('성과 측정 기준값 저장을 확인해 주세요.')
     # 문서 생성 실패가 AI 기획안 본문 저장을 되돌리지는 않도록 파일 출력은 별도로 보호합니다.
     for file_format in ('docx', 'pptx'):
+        if cancellation_event and cancellation_event.is_set():
+            raise asyncio.CancelledError('Strategy report document persistence was cancelled.')
         try:
             write_document(job_id, file_format, _render_strategy_document(payload, file_format),
                            render_version=DOCUMENT_RENDER_VERSIONS[file_format], report_payload=payload)
@@ -1386,18 +1458,35 @@ async def _run_strategy_report_job(
     request: ReportRequest,
     *,
     snapshot: dict[str, Any] | None = None,
+    env_values: dict[str, Any] | None = None,
+    cancellation_event: asyncio.Event | None = None,
 ) -> None:
     """긴 Agent 작업을 HTTP 요청 수명과 분리해 서버에서 끝까지 실행합니다."""
     job = STRATEGY_REPORT_JOBS[job_id]
+    cancellation_event = cancellation_event or STRATEGY_REPORT_CANCELLATIONS.setdefault(job_id, asyncio.Event())
+    if cancellation_event.is_set():
+        job.update(status='cancelled', message='기획서 생성을 취소했습니다.', error='', report=None)
+        _persist_job_state_best_effort(job_id, job)
+        if _is_openai_byok_mode():
+            await BYOK_VAULT.release_job_credential(job_id)
+        return
     job.update(status='running', message='지역 원자료와 공식 근거를 확인하고 있습니다.', error='')
     _persist_job_state_best_effort(job_id, job)
     try:
         snapshot = snapshot or build_region_snapshot(request.region_name)
         from .generation_progress import track_progress
         def update_progress(step, message):
+            if cancellation_event.is_set():
+                raise asyncio.CancelledError('Strategy report generation was cancelled.')
             job.update(progress_step=step, message=message)
         with track_progress(update_progress):
-            report = await generate_orchestrated_report(region_code, request, snapshot=snapshot)
+            report = await generate_orchestrated_report(
+                region_code, request, snapshot=snapshot, env_values=env_values,
+                cancellation_event=cancellation_event,
+            )
+    except asyncio.CancelledError:
+        # 취소는 실패가 아닙니다. 부분 결과·offline fallback·저장을 모두 건너뜁니다.
+        job.update(status='cancelled', message='기획서 생성을 취소했습니다.', error='', report=None)
     except HTTPException as exc:
         message = _job_error_message(exc)
         # 개발 중 크레딧·할당량 문제에서는 기존 화면 검토용 원자료 샘플을 사용합니다.
@@ -1417,26 +1506,98 @@ async def _run_strategy_report_job(
         LOGGER.exception('Background strategy job failed: job_id=%s', job_id)
         job.update(status='failed', message='기획서 생성을 완료하지 못했습니다.', error='서버 내부 오류입니다. 서버 로그를 확인해 주세요.')
     else:
-        job.update(status='completed', message='AI 전략기획서 생성이 완료되었습니다.', report=report)
+        if cancellation_event.is_set():
+            job.update(status='cancelled', message='기획서 생성을 취소했습니다.', error='', report=None)
+        else:
+            job.update(status='completed', message='AI 전략기획서 생성이 완료되었습니다.', report=report)
     if job.get('status') == 'completed' and job.get('report'):
         completion_message = job['message']
-        job.update(status='running', progress_step=4, message='품질검토를 마쳤습니다. 기획안 본문을 저장하고 Word·PowerPoint를 준비하고 있습니다.')
+        # Agent 단계가 끝나 정상 보고서가 확정된 뒤에는 취소 가능한 생성 상태로 되돌리지 않습니다.
+        # 따라서 완료와 취소가 경합하면 먼저 확정된 terminal state를 그대로 유지합니다.
+        job.update(progress_step=4, message='품질검토를 마쳤습니다. 기획안 본문을 저장하고 Word·PowerPoint를 준비하고 있습니다.')
         try:
-            warnings = await asyncio.to_thread(_persist_completed_strategy_report, job_id, region_code, job['report'], snapshot=snapshot)
+            if cancellation_event.is_set():
+                raise asyncio.CancelledError('Strategy report persistence was cancelled.')
+            warnings = await asyncio.to_thread(
+                _persist_completed_strategy_report, job_id, region_code, job['report'], snapshot,
+                cancellation_event,
+            )
+            if cancellation_event.is_set():
+                raise asyncio.CancelledError('Strategy report persistence was cancelled.')
             job['persistence_status'] = 'saved'
             completion_message += ' ' + ' '.join(warnings or [])
+        except asyncio.CancelledError:
+            job.update(status='cancelled', message='기획서 생성을 취소했습니다.', error='', report=None)
         except Exception as exc:
             # 저장 실패는 생성 결과를 없애지 않고, 서버 로그에서 DB 연결을 점검할 수 있게 남깁니다.
             LOGGER.exception('Strategy report persistence failed: job_id=%s error=%s', job_id, type(exc).__name__)
             job['persistence_status'] = 'failed'
             completion_message = '기획안은 생성됐지만 MySQL 저장에 실패했습니다. 서버 DB 설정을 확인해 주세요.'
-        job.update(status='completed', message=completion_message.strip())
+        if job.get('status') != 'cancelled':
+            job.update(status='completed', message=completion_message.strip())
     _persist_job_state_best_effort(job_id, job)
+    if _is_openai_byok_mode():
+        await BYOK_VAULT.release_job_credential(job_id)
+    STRATEGY_REPORT_TASKS.pop(job_id, None)
+    STRATEGY_REPORT_CANCELLATIONS.pop(job_id, None)
 
 
 @app.get('/ai/health')
 async def health_check() -> dict[str, str]:
     return {'status': 'ok'}
+
+
+@app.get('/ai/v1/byok/capability')
+async def read_byok_capability() -> dict[str, Any]:
+    """브라우저에 credential source나 내부 provider 정보를 노출하지 않는 공개 설정입니다."""
+    return {
+        'runtime_mode': _ai_runtime_mode(),
+        'requires_user_api_key': _is_openai_byok_mode(),
+        'session_cookie': _is_openai_byok_mode(),
+    }
+
+
+@app.get('/ai/v1/byok/session')
+async def read_byok_session(byok_session: str | None = Cookie(default=None, alias=BYOK_COOKIE_NAME)) -> dict[str, Any]:
+    expires_at = await BYOK_VAULT.status(byok_session) if _is_openai_byok_mode() else None
+    return {
+        'runtime_mode': _ai_runtime_mode(),
+        'connected': bool(expires_at) if _is_openai_byok_mode() else False,
+        'expires_at': expires_at.isoformat() if expires_at else None,
+    }
+
+
+@app.post('/ai/v1/byok/session')
+async def create_byok_session(
+    payload: ByokSessionCreateRequest,
+    http_request: Request,
+    response: Response,
+) -> dict[str, Any]:
+    if not _is_openai_byok_mode():
+        raise HTTPException(status_code=409, detail={'code': 'BYOK_NOT_REQUIRED', 'message': '현재 로컬 Ollama 환경에서는 OpenAI API Key 연결이 필요하지 않습니다.'})
+    if not _is_https_or_local(http_request):
+        raise HTTPException(status_code=403, detail={'code': 'BYOK_HTTPS_REQUIRED', 'message': 'OpenAI API Key 연결에는 보안 연결(HTTPS)이 필요합니다.'})
+    session_id, expires_at = await BYOK_VAULT.create(payload.openai_api_key.get_secret_value())
+    response.set_cookie(
+        key=BYOK_COOKIE_NAME,
+        value=session_id,
+        httponly=True,
+        secure=(http_request.url.hostname or '').lower() not in {'localhost', '127.0.0.1', '::1'},
+        samesite='strict',
+        path='/ai',
+        max_age=int(ENV_VALUES.get('BYOK_SESSION_TTL_SECONDS') or 7200),
+    )
+    return {'runtime_mode': 'openai_byok', 'connected': True, 'expires_at': expires_at.isoformat()}
+
+
+@app.delete('/ai/v1/byok/session')
+async def delete_byok_session(
+    response: Response,
+    byok_session: str | None = Cookie(default=None, alias=BYOK_COOKIE_NAME),
+) -> dict[str, Any]:
+    await BYOK_VAULT.disconnect(byok_session)
+    response.delete_cookie(BYOK_COOKIE_NAME, path='/ai')
+    return {'runtime_mode': _ai_runtime_mode(), 'connected': False, 'expires_at': None}
 
 
 @app.get('/ai/v1/strategy-reports')
@@ -1560,9 +1721,11 @@ async def read_ml_learning_catalog() -> MlLearningCatalog:
 async def chat_with_ml_learning_assistant(
     region_code: str,
     request: MlLearningChatRequest,
+    byok_session: str | None = Cookie(default=None, alias=BYOK_COOKIE_NAME),
 ) -> MlLearningChatResponse:
     """등록 모델·평가·함수 정보만 근거로 ML 학습 질문에 답합니다."""
-    if not (ENV_VALUES.get('OPENAI_API_KEY') or '').strip():
+    runtime_env = await _request_ai_env(byok_session) if _is_openai_byok_mode() else ENV_VALUES
+    if not (runtime_env.get('OPENAI_API_KEY') or '').strip():
         raise HTTPException(
             status_code=503,
             detail={'code': 'OPENAI_KEY_MISSING', 'message': 'ML 챗봇을 사용하려면 AI 서버의 OpenAI API 키가 필요합니다.'},
@@ -1575,7 +1738,7 @@ async def chat_with_ml_learning_assistant(
             detail={'code': 'ML_LEARNING_REGION_UNAVAILABLE', 'message': '선택 지역의 머신러닝 학습 정보를 찾지 못했습니다.'},
         )
     try:
-        result = await MlLearningAssistantAgent(env_values=ENV_VALUES).answer(
+        result = await MlLearningAssistantAgent(env_values=runtime_env).answer(
             learning_region=region.model_dump(mode='json'),
             question=request.question,
             history=[message.model_dump() for message in request.history],
@@ -1589,24 +1752,29 @@ async def chat_with_ml_learning_assistant(
 
 
 @app.get('/ai/v1/learning/assistant-status', response_model=LearningAssistantStatusResponse)
-async def read_learning_assistant_status() -> LearningAssistantStatusResponse:
+async def read_learning_assistant_status(
+    byok_session: str | None = Cookie(default=None, alias=BYOK_COOKIE_NAME),
+) -> LearningAssistantStatusResponse:
     """AI Server·OpenAI 키·선택 모델 연결을 확인해 학습 챗봇 배지에 제공합니다."""
+    if _is_openai_byok_mode() and not await BYOK_VAULT.status(byok_session):
+        return LearningAssistantStatusResponse(status='inactive', message='OpenAI API Key 연결이 필요합니다.')
+    runtime_env = await _request_ai_env(byok_session) if _is_openai_byok_mode() else ENV_VALUES
     model = str(
-        ENV_VALUES.get('OPENAI_LEARNING_CHAT_MODEL')
+        runtime_env.get('OPENAI_LEARNING_CHAT_MODEL')
         or ENV_VALUES.get('OPENAI_ML_CHAT_MODEL')
         or ENV_VALUES.get('OPENAI_CHAT_MODEL')
         or ENV_VALUES.get('OPENAI_MODEL')
         or 'gpt-5.5'
     ).strip()
     status = await check_openai_readiness(
-        api_key=str(ENV_VALUES.get('OPENAI_API_KEY') or ''), model=model,
+        api_key=str(runtime_env.get('OPENAI_API_KEY') or ''), model=model,
     )
     return LearningAssistantStatusResponse(**status)
 
 
-def _llm_router() -> LLMRouter:
+def _llm_router(env_values: dict[str, Any] | None = None) -> LLMRouter:
     """요청마다 저장된 운영 설정을 다시 읽어 서버 재시작 없이 상태·관리 화면을 갱신합니다."""
-    return LLMRouter(project_root=PROJECT_ROOT, env_values=ENV_VALUES)
+    return LLMRouter(project_root=PROJECT_ROOT, env_values=env_values or ENV_VALUES)
 
 
 def _require_llm_admin_token(x_llm_admin_token: str | None) -> None:
@@ -1677,16 +1845,18 @@ async def read_project_learning_catalog(topic: Literal['openai', 'react']) -> Pr
 @app.post('/ai/v1/learning/{topic}/assistant', response_model=ProjectLearningChatResponse)
 async def chat_with_project_learning_assistant(
     topic: Literal['openai', 'react'], request: ProjectLearningChatRequest,
+    byok_session: str | None = Cookie(default=None, alias=BYOK_COOKIE_NAME),
 ) -> ProjectLearningChatResponse:
     """자동 탐색한 현재 구조를 근거로 OpenAI·React 학습 질문에 답합니다."""
     catalog = await asyncio.to_thread(build_project_learning_catalog, topic)
-    if not (ENV_VALUES.get('OPENAI_API_KEY') or '').strip():
+    runtime_env = await _request_ai_env(byok_session) if _is_openai_byok_mode() else ENV_VALUES
+    if not (runtime_env.get('OPENAI_API_KEY') or '').strip():
         raise HTTPException(
             status_code=503,
             detail={'code': 'OPENAI_KEY_MISSING', 'message': '학습 챗봇을 사용하려면 AI 서버의 OpenAI API 키가 필요합니다.'},
         )
     try:
-        result = await ProjectLearningAssistantAgent(env_values=ENV_VALUES).answer(
+        result = await ProjectLearningAssistantAgent(env_values=runtime_env).answer(
             topic=topic, project_catalog=catalog.model_dump(mode='json'),
             question=request.question, history=[message.model_dump() for message in request.history],
         )
@@ -1890,7 +2060,11 @@ async def read_planning_reference(request: Request, filename: str) -> dict:
 
 
 @app.post('/ai/v1/demo/{region_code}/strategy-report/jobs', response_model=StrategyReportJobResponse, status_code=202)
-async def start_region_strategy_report_job(region_code: str, request: ReportRequest) -> StrategyReportJobResponse:
+async def start_region_strategy_report_job(
+    region_code: str,
+    request: ReportRequest,
+    byok_session: str | None = Cookie(default=None, alias=BYOK_COOKIE_NAME),
+) -> StrategyReportJobResponse:
     """AI 전략기획 생성을 백그라운드에 등록하고 즉시 작업 ID를 반환합니다."""
     request = request.model_copy(update={'planning_brief': resolve_new_planning_brief(request.planning_brief or PlanningBrief(region_code=region_code, input_profile='guided_v2'))}, deep=True)
     if request.planning_brief and request.planning_brief.region_code != region_code:
@@ -1908,12 +2082,23 @@ async def start_region_strategy_report_job(region_code: str, request: ReportRequ
     # 실행 조건은 작업마다 복사합니다. 다른 사용자의 같은 지역 작업을 차단하지 않습니다.
     request = request.model_copy(deep=True)
     job_id = uuid4().hex
+    try:
+        job_env = await _request_ai_env(byok_session)
+        if _is_openai_byok_mode():
+            # 세션 만료·연결해제와 별개로 이미 시작한 job이 같은 사용자 key로 끝나도록
+            # 메모리 vault에 job 전용 reference만 잡습니다. DB에는 저장하지 않습니다.
+            job_env = {**job_env, 'OPENAI_API_KEY': await BYOK_VAULT.acquire_job_credential(byok_session, job_id)}
+    except ByokSessionError as exc:
+        raise HTTPException(status_code=401, detail={'code': exc.code, 'message': exc.message}) from exc
     STRATEGY_REPORT_JOBS[job_id] = {
         'region_code': region_code,
         'region_name': request.region_name,
         'status': 'queued',
         'message': 'AI 전략기획서 생성 요청을 등록했습니다.',
         'error': '',
+        # Production BYOK에서만 opaque session id로 취소 요청의 소유자를 분리합니다.
+        # raw API Key는 이 dict를 포함한 어떤 job state에도 넣지 않습니다.
+        'byok_session_owner': byok_session if _is_openai_byok_mode() else None,
     }
     # 첨부 본문은 메모리에서만 Agent에 전달합니다. MySQL에는 첨부를 제거한 조건과
     # 재시작 가능 여부만 저장해 개인정보·참고문서 비저장 원칙을 지킵니다.
@@ -1927,7 +2112,51 @@ async def start_region_strategy_report_job(region_code: str, request: ReportRequ
         )
     except Exception as exc:
         LOGGER.warning('Strategy job initial persistence failed: job_id=%s error=%s', job_id, type(exc).__name__)
-    asyncio.create_task(_run_strategy_report_job(job_id, region_code, request, snapshot=snapshot))
+    cancellation_event = asyncio.Event()
+    STRATEGY_REPORT_CANCELLATIONS[job_id] = cancellation_event
+    task = asyncio.create_task(
+        _run_strategy_report_job(
+            job_id, region_code, request, snapshot=snapshot, env_values=job_env,
+            cancellation_event=cancellation_event,
+        ),
+    )
+    STRATEGY_REPORT_TASKS[job_id] = task
+    return _strategy_job_response(job_id)
+
+
+@app.post('/ai/v1/demo/{region_code}/strategy-report/jobs/{job_id}/cancel', response_model=StrategyReportJobResponse)
+async def cancel_region_strategy_report_job(
+    region_code: str,
+    job_id: str,
+    byok_session: str | None = Cookie(default=None, alias=BYOK_COOKIE_NAME),
+) -> StrategyReportJobResponse:
+    """명시적으로 요청한 한 개의 생성 job만 중단합니다. 페이지 이동은 취소가 아닙니다."""
+    job = STRATEGY_REPORT_JOBS.get(job_id)
+    if not job or job.get('region_code') != region_code:
+        raise HTTPException(status_code=404, detail={
+            'code': 'STRATEGY_JOB_NOT_FOUND', 'message': '진행 중인 전략기획 작업을 찾지 못했습니다.',
+        })
+    if _is_openai_byok_mode() and job.get('byok_session_owner') != byok_session:
+        raise HTTPException(status_code=404, detail={
+            'code': 'STRATEGY_JOB_NOT_FOUND', 'message': '진행 중인 전략기획 작업을 찾지 못했습니다.',
+        })
+    if job.get('status') in {'completed', 'failed', 'cancelled'}:
+        return _strategy_job_response(job_id)
+    cancellation_event = STRATEGY_REPORT_CANCELLATIONS.setdefault(job_id, asyncio.Event())
+    cancellation_event.set()
+    job.update(status='cancelling', message='기획서 생성 취소 요청을 처리하고 있습니다.', error='', report=None)
+    _persist_job_state_best_effort(job_id, job)
+    task = STRATEGY_REPORT_TASKS.get(job_id)
+    if task and not task.done():
+        # httpx 요청을 기다리는 OpenAI/Ollama 호출에 CancelledError를 전파해 연결을 즉시 정리합니다.
+        task.cancel()
+    elif not task:
+        # 서버 재시작 등으로 실행 task가 사라진 작업은 부분 결과를 복구하지 않고 취소로 확정합니다.
+        job.update(status='cancelled', message='기획서 생성을 취소했습니다.', error='', report=None)
+        _persist_job_state_best_effort(job_id, job)
+        if _is_openai_byok_mode():
+            await BYOK_VAULT.release_job_credential(job_id)
+        STRATEGY_REPORT_CANCELLATIONS.pop(job_id, None)
     return _strategy_job_response(job_id)
 
 
@@ -1972,11 +2201,15 @@ async def read_region_strategy_report_job(region_code: str, job_id: str) -> Stra
 
 
 @app.post('/ai/v1/demo/{region_code}/strategy-report', response_model=ReportResponse)
-async def create_region_strategy_report(region_code: str, request: ReportRequest) -> ReportResponse:
+async def create_region_strategy_report(
+    region_code: str,
+    request: ReportRequest,
+    byok_session: str | None = Cookie(default=None, alias=BYOK_COOKIE_NAME),
+) -> ReportResponse:
     """선택 지역 근거와 공식 성공사례를 다섯 Agent가 처리한 전략 보고서를 생성합니다."""
     request = request.model_copy(update={'planning_brief': resolve_new_planning_brief(request.planning_brief or PlanningBrief(region_code=region_code, input_profile='guided_v2'))}, deep=True)
     try:
-        return await generate_orchestrated_report(region_code, request)
+        return await generate_orchestrated_report(region_code, request, env_values=await _request_ai_env(byok_session))
     except (FileNotFoundError, KeyError, ValueError) as exc:
         raise HTTPException(
             status_code=404,
@@ -2022,7 +2255,11 @@ def _offline_assistant_response(snapshot: dict[str, Any]) -> AssistantChatRespon
 
 
 @app.post('/ai/v1/demo/{region_code}/assistant-chat', response_model=AssistantChatResponse)
-async def chat_with_tourism_assistant(region_code: str, request: AssistantChatRequest) -> AssistantChatResponse:
+async def chat_with_tourism_assistant(
+    region_code: str,
+    request: AssistantChatRequest,
+    byok_session: str | None = Cookie(default=None, alias=BYOK_COOKIE_NAME),
+) -> AssistantChatResponse:
     """지역 원자료·현재 기획안·공식 웹 자료를 근거로 설명하거나 수정안을 제안합니다."""
     if request.current_report:
         from .idea_proposal import bounded_chat_reply
@@ -2037,13 +2274,14 @@ async def chat_with_tourism_assistant(region_code: str, request: AssistantChatRe
             detail={'code': 'REGION_ASSISTANT_DATA_UNAVAILABLE', 'message': '선택 지역의 챗봇용 원자료를 읽지 못했습니다.'},
         ) from exc
 
-    api_key = (ENV_VALUES.get('OPENAI_API_KEY') or '').strip()
-    local_llm_url = (ENV_VALUES.get('LOCAL_LLM_BASE_URL') or '').strip()
+    runtime_env = await _request_ai_env(byok_session) if _is_openai_byok_mode() else ENV_VALUES
+    api_key = (runtime_env.get('OPENAI_API_KEY') or '').strip()
+    local_llm_url = (runtime_env.get('LOCAL_LLM_BASE_URL') or '').strip()
     if not api_key and not local_llm_url:
         return _offline_assistant_response(snapshot)
 
     try:
-        result = await TourismChatAssistantAgent(env_values=ENV_VALUES, llm_router=_llm_router()).answer(
+        result = await TourismChatAssistantAgent(env_values=runtime_env, llm_router=_llm_router(runtime_env)).answer(
             snapshot=snapshot,
             question=request.question,
             history=[message.model_dump() for message in request.history],

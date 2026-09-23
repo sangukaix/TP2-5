@@ -197,6 +197,8 @@ async def create_structured_response(
     attempts: list[dict[str, Any]] = []
     total_usage: dict[str, int] = {}
     for index, limit in enumerate(limits):
+        # 취소 요청이 첫 응답과 token-limit 재시도 사이에 도착하면 다음 유료 요청을 시작하지 않습니다.
+        await asyncio.sleep(0)
         body['max_output_tokens'] = limit
         started = perf_counter()
         try:
@@ -331,12 +333,12 @@ def _http_response_error(response: httpx.Response) -> OpenAIResponseError:
     detail = {'http_status': status, 'code': code, 'type': kind}
     app_code, message = 'OPENAI_RESPONSE_ERROR', 'OpenAI가 요청을 처리하지 못했습니다. 관리자 오류 기록을 확인해 주세요.'
     if status == 401:
-        app_code, message = 'OPENAI_AUTH_ERROR', 'AI 서버의 OpenAI API 키 인증에 실패했습니다.'
+        app_code, message = 'OPENAI_AUTH_ERROR', 'OpenAI API Key가 올바르지 않거나 만료되었습니다.'
     elif status == 403:
-        app_code, message = 'OPENAI_ACCESS_ERROR', 'OpenAI API 접근이 거부되었습니다. 프로젝트 권한과 접근 제한을 확인해 주세요.'
+        app_code, message = 'OPENAI_ACCESS_ERROR', '해당 API Key에 필요한 OpenAI 권한이 없습니다. Project와 모델 권한을 확인해주세요.'
     elif status == 429:
         if code in billing_codes or kind == 'insufficient_quota':
-            app_code, message = 'OPENAI_QUOTA_ERROR', 'OpenAI API 크레딧 또는 사용·지출 한도에 도달했습니다. API 결제와 한도를 확인해 주세요.'
+            app_code, message = 'OPENAI_QUOTA_ERROR', 'OpenAI API 사용 한도 또는 잔액을 확인해주세요.'
         elif code in {'rate_limit_exceeded', 'slow_down'} or kind == 'rate_limit_error':
             app_code, message = 'OPENAI_RATE_LIMIT_ERROR', 'OpenAI API 요청 속도 한도에 도달했습니다. 잠시 후 다시 시도해 주세요.'
         else:
@@ -344,6 +346,6 @@ def _http_response_error(response: httpx.Response) -> OpenAIResponseError:
     elif status >= 500:
         app_code, message = 'OPENAI_SERVER_ERROR', 'OpenAI 서버에서 요청 처리 오류가 발생했습니다. 잠시 후 상태를 확인해 주세요.'
     elif status in (400, 404, 422):
-        app_code, message = 'OPENAI_MODEL_OR_REQUEST_ERROR', 'OpenAI 모델 또는 요청 설정을 처리할 수 없습니다. 관리자 설정을 확인해 주세요.'
+        app_code, message = 'OPENAI_MODEL_OR_REQUEST_ERROR', '현재 OpenAI 모델 사용 권한을 확인해주세요.'
     return OpenAIResponseError(app_code, message, status_code=503 if status == 401 else 502,
                                upstream_error=detail)

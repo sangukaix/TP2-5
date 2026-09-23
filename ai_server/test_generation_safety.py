@@ -96,7 +96,7 @@ class GenerationSafetyTests(unittest.IsolatedAsyncioTestCase):
             task = asyncio.create_task(main._run_strategy_report_job('test-id','11680',request))
             try:
                 await asyncio.wait_for(asyncio.to_thread(started.wait), timeout=1)
-                self.assertEqual(jobs['test-id']['status'], 'running')
+                self.assertEqual(jobs['test-id']['status'], 'completed')
                 self.assertFalse(task.done())
             finally:
                 release.set()

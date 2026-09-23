@@ -47,8 +47,21 @@ def _rag_registry_hash(agent: Any, filename: str) -> str:
     return sha256(path.read_bytes()).hexdigest() if path.exists() else ''
 
 
-async def _run_openai_stage(stage_code: str, stage_label: str, awaitable: Any) -> Any:
+def _raise_if_cancelled(cancellation_event: asyncio.Event | None) -> None:
+    """취소된 job이 다음 Agent·재시도·최종 저장 단계로 진행하지 않게 합니다."""
+    if cancellation_event and cancellation_event.is_set():
+        raise asyncio.CancelledError('Strategy report generation was cancelled.')
+
+
+async def _run_openai_stage(
+    stage_code: str,
+    stage_label: str,
+    awaitable: Any,
+    *,
+    cancellation_event: asyncio.Event | None = None,
+) -> Any:
     """실패 메시지에 Agent 단계를 붙여 재시도 전에 병목을 찾을 수 있게 합니다."""
+    _raise_if_cancelled(cancellation_event)
     started = perf_counter()
     LOGGER.info('Strategy Agent stage started: %s', stage_code)
     try:
@@ -63,6 +76,7 @@ async def _run_openai_stage(stage_code: str, stage_label: str, awaitable: Any) -
             f'{stage_label} 단계에서 처리하지 못했습니다: {exc.message}',
             status_code=exc.status_code,
         ) from exc
+    _raise_if_cancelled(cancellation_event)
     LOGGER.info(
         'Strategy Agent stage completed: %s duration_ms=%s',
         stage_code, round((perf_counter() - started) * 1000),
@@ -204,7 +218,9 @@ async def orchestrate_strategy_report(
     snapshot: dict[str, Any],
     report_schema: dict[str, Any],
     planning_brief: dict[str, Any] | None = None,
+    cancellation_event: asyncio.Event | None = None,
 ) -> dict[str, Any]:
+    _raise_if_cancelled(cancellation_event)
     api_key = str(env_values.get('OPENAI_API_KEY') or '').strip()
     report_model = str(
         env_values.get('OPENAI_REPORT_MODEL')
@@ -219,14 +235,19 @@ async def orchestrate_strategy_report(
                   'routing': llm_router.public_config(), 'effective_routes': llm_router.effective_routes()})
     from ..generation_progress import notify_progress
     notify_progress(0, '생성 준비: 선택한 로컬 모델 연결을 확인하고 있습니다.')
-    await _run_openai_stage('local_preflight', '로컬 모델 연결 확인', llm_router.preflight_local_models())
+    await _run_openai_stage(
+        'local_preflight', '로컬 모델 연결 확인', llm_router.preflight_local_models(),
+        cancellation_event=cancellation_event,
+    )
 
     # OpenAI가 개입하기 전에 저장 모델로 숫자를 계산합니다. 원본 snapshot·사용자 조건은 변경하지 않습니다.
     snapshot = deepcopy(snapshot)
     notify_progress(0, '지역 원자료와 저장된 머신러닝 모델의 관광지표 전망을 확인하고 있습니다.')
+    _raise_if_cancelled(cancellation_event)
     ml_evidence = await asyncio.to_thread(
         build_planning_ml_evidence, region_code, snapshot['region_name'], planning_brief,
     )
+    _raise_if_cancelled(cancellation_event)
     snapshot['ml_analysis'] = ml_evidence.model_dump(mode='json')
     if (planning_brief or {}).get('input_profile') in ('guided_v1', 'guided_v2') and not snapshot['ml_analysis'].get('horizon_policy', {}).get('coverage_complete'):
         raise OpenAIResponseError('PLANNING_PERIOD_UNSUPPORTED', '선택한 3개월 전체의 ML 전망을 제공할 수 없습니다. 시작 월을 앞당기거나 최신 데이터를 반영해 주세요.', status_code=422)
@@ -247,14 +268,14 @@ async def orchestrate_strategy_report(
             region_code=region_code,
             snapshot=snapshot,
             planning_brief=planning_brief,
-        )),
+        ), cancellation_event=cancellation_event),
         _run_openai_stage('case_scout', '공식 사례 조사', _collect_case_studies(
             agent=case_study_agent,
             env_values=env_values,
             region_code=region_code,
             snapshot=snapshot,
             planning_brief=planning_brief,
-        )),
+        ), cancellation_event=cancellation_event),
     )
     evidence_pack, evidence_cache_hit = evidence_result
     # 사용자가 입력한 여건을 snapshot(공식 관측값)에 섞지 않습니다.
@@ -311,6 +332,7 @@ async def orchestrate_strategy_report(
         'transferability',
         '지역 적용 가능성 검토',
         TransferabilityAgent(api_key=api_key, model=transfer_model, llm_router=llm_router).assess(evidence_pack=evidence_pack),
+        cancellation_event=cancellation_event,
     )
     trace.extend(llm_router.consume_trace())
     # 저장된 사례가 실제 지역 문제에 부족하다고 지역 비교 AI가 판단한 경우에만 공식 웹 보강 1회를 허용합니다.
@@ -319,7 +341,7 @@ async def orchestrate_strategy_report(
             and not transfer_assessment.get('constraint_repair') and not case_pack.get('web_research_attempted')):
         augmented = await _run_openai_stage('case_scout_supplement', '부족한 공식 사례 보강', case_study_agent.collect(
             region_code=region_code, snapshot=snapshot, planning_brief=planning_brief, force_web=True,
-        ))
+        ), cancellation_event=cancellation_event)
         trace.extend(augmented.pop('trace', []))
         trace.extend(llm_router.consume_trace())
         previous_cases = {row['source_id']: row for row in evidence_pack['benchmark_cases']}
@@ -334,15 +356,20 @@ async def orchestrate_strategy_report(
         evidence_pack['research_gaps'] = list(dict.fromkeys(evidence_pack['research_gaps'] + augmented.get('research_gaps', [])))
         if augmented.get('web_research_attempted') and augmented.get('benchmark_cases'):
             transfer_assessment = await _run_openai_stage('transferability_recheck', '보강 사례 적용성 재검토',
-                TransferabilityAgent(api_key=api_key, model=transfer_model, llm_router=llm_router).assess(evidence_pack=evidence_pack))
+                TransferabilityAgent(api_key=api_key, model=transfer_model, llm_router=llm_router).assess(
+                    evidence_pack=evidence_pack,
+                ), cancellation_event=cancellation_event)
     evidence_pack['transfer_assessment'] = transfer_assessment
     # 본문 작성자는 후보 선정 JSON을 고칠 수 없다. 작성 가능한 누락이 있을 때만 Qwen에게
     # 보유 근거로 1회 보완시킨다. 새 검색/유료 폴백/무제한 재시도는 하지 않는다.
     candidate_issues = candidate_delivery_issues(evidence_pack, transfer_assessment)
     if llm_router.local_first and candidate_issues and len(evidence_pack.get('benchmark_cases') or []) >= 2:
         try:
-            repaired = await TransferabilityAgent(api_key=api_key, model=transfer_model, llm_router=llm_router).assess(
-                evidence_pack=evidence_pack, revision_feedback=candidate_issues,
+            repaired = await _run_openai_stage(
+                'transferability_repair', '후보 보완 검토',
+                TransferabilityAgent(api_key=api_key, model=transfer_model, llm_router=llm_router).assess(
+                    evidence_pack=evidence_pack, revision_feedback=candidate_issues,
+                ), cancellation_event=cancellation_event,
             )
         except (OpenAIResponseError, LLMProviderError) as exc:
             trace.append({'agent': 'transferability', 'stage': 'candidate_repair', 'status': 'failed', 'error_code': exc.code})
@@ -411,7 +438,9 @@ async def orchestrate_strategy_report(
 
     started = perf_counter()
     notify_progress(2, 'Gemma가 선정한 사업과 근거를 바탕으로 기획서 초안을 작성하고 있습니다.')
-    draft = await _run_openai_stage('planner_draft', '기획안 초안 작성', planner.write(evidence_pack))
+    draft = await _run_openai_stage(
+        'planner_draft', '기획안 초안 작성', planner.write(evidence_pack), cancellation_event=cancellation_event,
+    )
     notify_progress(3, '초안의 수치·출처·실행 계획을 코드와 검수 모델로 확인하고 있습니다.')
     trace.append({'agent': 'planner', 'stage': 'draft', 'status': 'completed', 'duration_ms': round((perf_counter() - started) * 1000)})
     trace.extend(llm_router.consume_trace())
@@ -420,7 +449,11 @@ async def orchestrate_strategy_report(
     precheck = build_plan_quality_precheck(evidence_pack, draft)
     review_failed = False
     try:
-        review = await reviewer.review(evidence_pack=evidence_pack, draft_report=draft, deterministic_precheck=precheck)
+        review = await _run_openai_stage(
+            'first_reviewer', '1차 품질검토',
+            reviewer.review(evidence_pack=evidence_pack, draft_report=draft, deterministic_precheck=precheck),
+            cancellation_event=cancellation_event,
+        )
     except (OpenAIResponseError, LLMProviderError) as exc:
         # 작성 이후 연결이 끊겨도 초안을 버리지 않습니다. 검수 실패를 점수나 승인으로 위장하지 않습니다.
         review_failed = True
@@ -441,10 +474,12 @@ async def orchestrate_strategy_report(
         revision_checks = build_plan_quality_precheck(evidence_pack, original_draft, limit=None)
         revision_feedback = merge_quality_precheck(review, revision_checks, limit=None)
         try:
-            draft = await planner.write(
-                evidence_pack,
-                revision_feedback=revision_feedback,
-                previous_draft=original_draft,
+            draft = await _run_openai_stage(
+                'planner_revision', '기획안 보완', planner.write(
+                    evidence_pack,
+                    revision_feedback=revision_feedback,
+                    previous_draft=original_draft,
+                ), cancellation_event=cancellation_event,
             )
         except (OpenAIResponseError, LLMProviderError) as exc:
             # 외부 모델이 수정 요청을 거절하거나 지연되어도 검수되지 않은 결과를 승인하거나
@@ -467,9 +502,11 @@ async def orchestrate_strategy_report(
             try:
                 precheck = build_plan_quality_precheck(evidence_pack, draft)
                 notify_progress(3, '수정된 기획안의 근거와 내용을 다시 검토하고 있습니다.')
-                review = await reviewer.review(
-                    evidence_pack=evidence_pack, draft_report=draft, deterministic_precheck=precheck,
-                    final_pass=not llm_router.local_first,
+                review = await _run_openai_stage(
+                    'final_reviewer', '최종 품질검토', reviewer.review(
+                        evidence_pack=evidence_pack, draft_report=draft, deterministic_precheck=precheck,
+                        final_pass=not llm_router.local_first,
+                    ), cancellation_event=cancellation_event,
                 )
                 review = merge_quality_precheck(review, precheck)
             except (OpenAIResponseError, LLMProviderError) as exc:
@@ -495,8 +532,12 @@ async def orchestrate_strategy_report(
             try:
                 precheck = build_plan_quality_precheck(evidence_pack, draft)
                 audit_pack = {**evidence_pack, 'local_review_findings': local_review}
-                review = await reviewer.review(evidence_pack=audit_pack, draft_report=draft,
-                                               deterministic_precheck=precheck, final_pass=True)
+                review = await _run_openai_stage(
+                    'cloud_final_audit', '최종 독립 검수', reviewer.review(
+                        evidence_pack=audit_pack, draft_report=draft,
+                        deterministic_precheck=precheck, final_pass=True,
+                    ), cancellation_event=cancellation_event,
+                )
                 review = merge_quality_precheck(review, precheck)
                 review['final_audit_completed'] = True
                 trace.append({'agent': 'reviewer', 'stage': 'cloud_final_audit', 'status': 'completed',
@@ -509,6 +550,7 @@ async def orchestrate_strategy_report(
             trace.append({'agent': 'reviewer', 'stage': 'cloud_final_audit', 'status': 'skipped',
                           'reason': 'local_quality_gate_not_passed'})
 
+    _raise_if_cancelled(cancellation_event)
     review['revised_once'] = revised
     # LLM에는 상위 8개만 보내지만 화면에는 코드 점검 전체와 구체적인 보완 목록을 남긴다.
     all_checks = build_plan_quality_precheck(evidence_pack, draft, limit=None)

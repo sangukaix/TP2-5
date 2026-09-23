@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from copy import deepcopy
@@ -83,13 +84,18 @@ class LLMRouter:
         self.cloud_calls = 0
 
     @property
+    def byok_production(self) -> bool:
+        """운영 BYOK는 저장된 관리자 라우팅보다 항상 우선합니다."""
+        return str(self.env_values.get('AI_RUNTIME_MODE') or 'local_ollama').lower() == 'openai_byok'
+
+    @property
     def local_first(self) -> bool:
         """Qwen·Gemma 선행 실행과 유료 폴백 차단을 공유하는 두 모드입니다."""
-        return self.config['mode'] in {'local_first', 'local_first_gemma', 'student_budget'}
+        return not self.byok_production and self.config['mode'] in {'local_first', 'local_first_gemma', 'student_budget'}
 
     @property
     def gemma_only_local(self) -> bool:
-        return self.config['mode'] == 'local_first_gemma'
+        return not self.byok_production and self.config['mode'] == 'local_first_gemma'
 
     @property
     def required_local_providers(self) -> tuple[str, ...]:
@@ -98,7 +104,7 @@ class LLMRouter:
     @property
     def student_budget(self) -> bool:
         """저장된 근거만 재사용하고 OpenAI 독립 최종 검수 1회만 허용하는 학생용 모드입니다."""
-        return self.config['mode'] == 'student_budget'
+        return not self.byok_production and self.config['mode'] == 'student_budget'
 
     @property
     def max_cloud_calls_per_generation(self) -> int | None:
@@ -109,7 +115,7 @@ class LLMRouter:
 
     async def preflight_local_models(self) -> None:
         """로컬 우선 기획은 두 모델 연결을 먼저 확인해, 연결 실패 전에 유료 조사를 시작하지 않습니다."""
-        if not self.local_first:
+        if self.byok_production or not self.local_first:
             return
         import asyncio
         states = await asyncio.gather(*(self.providers[name].health() for name in self.required_local_providers))
@@ -164,6 +170,11 @@ class LLMRouter:
         """저장한 희망 설정과 실제 비용·능력 잠금이 적용된 실행 경로를 구분합니다."""
         routes = {}
         for task in DEFAULT_ROUTES:
+            if self.byok_production:
+                request = LLMRequest(task=task, instructions='', input_payload={}, schema_name='', schema={})
+                route = self._route(request)
+                routes[task] = {**route, 'model': self._model_for('openai', route, request)}
+                continue
             # 학생 절약 모드의 조사 단계는 OpenAI Web Search가 아닌 MySQL·공식 Open API·검수 RAG와,
             # 설정된 경우 Qwen 질문 → 무료 API → 공식 도메인 요약의 제한 경로를 사용합니다.
             if self.student_budget and task in WEB_SEARCH_TASKS:
@@ -209,7 +220,11 @@ class LLMRouter:
     def _route(self, request: LLMRequest) -> dict[str, Any]:
         route = deepcopy(self.config['routes'].get(request.task) or DEFAULT_ROUTES['planner'])
         configured_provider = route['provider']
-        if request.requires_web_search or request.task in WEB_SEARCH_TASKS:
+        if self.byok_production:
+            # 이 모드의 OpenAIProvider는 요청별 BYOK context로만 생성됩니다.
+            # 팀 환경변수 키와 관리자 fallback 설정은 어떤 stage에도 사용하지 않습니다.
+            route.update({'provider': 'openai', 'fallback': 'none', 'locked_reason': 'Production OpenAI BYOK'})
+        elif request.requires_web_search or request.task in WEB_SEARCH_TASKS:
             if self.student_budget:
                 raise LLMProviderError(
                     'STUDENT_BUDGET_WEB_SEARCH_DISABLED',
@@ -260,6 +275,8 @@ class LLMRouter:
         except LLMProviderError as exc:
             # Web Search 실패는 로컬 모델로 숨기지 않습니다. 조사 실패를 호출자에게 그대로 알립니다.
             if provider_name in {'qwen', 'gemma'} and route.get('fallback') == 'openai' and not request.requires_web_search:
+                # 로컬 실패 직후 사용자가 취소하면 유료 fallback 요청을 시작하지 않습니다.
+                await asyncio.sleep(0)
                 fallback_request = LLMRequest(**{**request.__dict__, 'model': None})
                 return await self._generate_tracked(
                     fallback_request, route, 'openai', provider_name, fallback_reason=exc.code,
