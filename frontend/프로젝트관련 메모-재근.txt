@@ -48,8 +48,35 @@ npm install
 MySQL tourism_app 계정/권한
 source_snapshots 데이터 준비
 
+9/23
+회원가입/로그인/마이 페이지 연동작업 진행과정
+-----
+1차: 회원가입 UI 이식 + 상단 회원가입/로그인/My Page 버튼
+2차: 로그인 UI 이식
+3차: 마이페이지 UI 이식
+4차: Backend 인증 API + AWS MySQL 연결
+5차: 로그인 세션/권한/마이페이지 실제 데이터 연결
 
 
+Signup UI ✅
+   ↓
+Login UI 
+   ↓
+My Page UI                                 ← 지금
+   ↓
+Frontend 3개 완성
+   ↓
+회원 DB schema 확인
+   ↓
+Signup API
+   ↓
+Login API + password hash
+   ↓
+Session/JWT/Cookie
+   ↓
+My Page 실제 사용자 정보 연결
+   ↓
+AWS MySQL 실제 검증
 
 
 
