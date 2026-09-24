@@ -3838,19 +3838,19 @@ html[data-theme='night'] .global-header-actions button::before{
   background:#46d9ea;  box-shadow: 0 0 8px rgb(70 217 234 / 70%),   0 0 16px rgb(70 217 234 / 25%);
 }
 /* 회원가입 - 청록 야경 */
-html[data-theme='night'] .global-header-actions button:nth-child(1)::before{
+html[data-theme='night'] .global-header-actions .account-action--signup::before{
   background:#39d6d7;  box-shadow: 0 0 8px rgb(57 214 215 / 75%),   0 0 16px rgb(57 214 215 / 28%);
 }
 /* 로그인 - 서울 야경 블루 */
-html[data-theme='night'] .global-header-actions button:nth-child(2)::before{
+html[data-theme='night'] .global-header-actions .account-action--login::before{
   background:#55a6ff;  box-shadow: 0 0 8px rgb(85 166 255 / 75%),   0 0 16px rgb(85 166 255 / 26%);
 }
 /* My Page - 보라빛 도심 조명 */
-html[data-theme='night'] .global-header-actions button:nth-child(3)::before{
+html[data-theme='night'] .global-header-actions .account-action--my::before{
   background:#8e79ea;  box-shadow: 0 0 8px rgb(142 121 234 / 70%),  0 0 16px rgb(142 121 234 / 26%);
 }
 /* Day Mode - 남산/도시의 따뜻한 불빛 */
-html[data-theme='night'] .global-header-actions button:nth-child(4)::before{
+html[data-theme='night'] .global-header-actions .theme-toggle::before{
   background:#f2b84b;  box-shadow: 0 0 8px rgb(242 184 75 / 72%),   0 0 16px rgb(242 184 75 / 24%);
 }
 /* hover */
@@ -3881,16 +3881,16 @@ html[data-theme='day'] .global-header-actions button::before{
   content:'';  position:absolute;  top:0; left:10px; right:10px;  height:2px; border-radius:0 0 999px 999px;
   background:#2eb7c4;   box-shadow: 0 0 6px rgb(46 183 196 / 38%),  0 0 12px rgb(46 183 196 / 14%);}
 /* 회원가입 - 청자 / 맑은 청록빛 */
-html[data-theme='day'] .global-header-actions button:nth-child(1)::before{
+html[data-theme='day'] .global-header-actions .account-action--signup::before{
   background:#24aeb8;  box-shadow:  0 0 6px rgb(36 174 184 / 42%),  0 0 12px rgb(36 174 184 / 16%);}
 /* 로그인 - 맑은 서울 하늘 / 쪽빛 */
-html[data-theme='day'] .global-header-actions button:nth-child(2)::before{
+html[data-theme='day'] .global-header-actions .account-action--login::before{
   background:#4387ce;  box-shadow:  0 0 6px rgb(67 135 206 / 40%),  0 0 12px rgb(67 135 206 / 14%);}
 /* My Page - 은은한 자색 / 전통 보라 계열 */
-html[data-theme='day'] .global-header-actions button:nth-child(3)::before{
+html[data-theme='day'] .global-header-actions .account-action--my::before{
   background:#806fbd;  box-shadow:  0 0 6px rgb(128 111 189 / 36%), 0 0 12px rgb(128 111 189 / 13%);}
 /* Night Mode - 따뜻한 황금빛 / 햇빛·단청 포인트 */
-html[data-theme='day'] .global-header-actions button:nth-child(4)::before{
+html[data-theme='day'] .global-header-actions .theme-toggle::before{
   background:#d69b39;  box-shadow:  0 0 6px rgb(214 155 57 / 42%),  0 0 12px rgb(214 155 57 / 15%);}
 /* Hover */
 html[data-theme='day'] .global-header-actions button:hover{
@@ -4067,4 +4067,12 @@ html[data-theme='day'] .login-page::before{background:transparent;}
   .global-header-actions .theme-toggle{width:30px;}
   .global-header-actions .theme-toggle span,
   .global-header-actions .admin-login-link span{display:none;}
+}
+
+/* 26.09.25_00:10 */
+.global-header-actions .header-username{max-width:12rem; overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; color:#f8fbff; font-size:1.4rem; font-weight:600;}
+html[data-theme='day'] .global-header-actions .header-username{color:#173b57;}
+@media(max-width:500px){
+  .global-header-actions .header-username{font-size:1.1rem;}
 }

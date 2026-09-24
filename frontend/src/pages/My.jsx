@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { findRegionByCode } from '../features/regions/regionCatalog'
 import { useRegionCatalog } from '../features/regions/useRegionCatalog'
+import { useAuth } from '../features/auth/useAuth'
+import { authApi } from '../api/authApi'
 import {
   Building2, CalendarDays, FileText, KeyRound, LockKeyhole, LogOut, Mail, MapPinned,
   Phone, ShieldCheck, Trash2, Upload, UserRound,
@@ -60,12 +62,16 @@ function handlePageLink(path) {
 }
 
 export default function My() {
-  const [profile, setProfile] = useState(INITIAL_PROFILE)
+  const { user, refreshUser, logout, setUser } = useAuth()
+  const [profile, setProfile] = useState(() => user ? {
+    userId: user.username, name: user.name || '', email: user.email,
+    phone: user.phone || '', regionCode: user.region_code,
+  } : INITIAL_PROFILE)
   const [draftSidoCode, setDraftSidoCode] = useState('')
   const selectedSidoCode = profile.regionCode.slice(0, 2) || draftSidoCode
   const { sidoOptions, sidoStatus, sigunguOptions, sigunguStatus } = useRegionCatalog(selectedSidoCode)
-  const [isEditingName, setIsEditingName] = useState(!INITIAL_PROFILE.name)
-  const [isEditingPhone, setIsEditingPhone] = useState(!INITIAL_PROFILE.phone)
+  const [isEditingName, setIsEditingName] = useState(!user?.name)
+  const [isEditingPhone, setIsEditingPhone] = useState(!user?.phone)
   const [profilePreview, setProfilePreview] = useState('')
   const [securityView, setSecurityView] = useState('')
   const [passwordForm, setPasswordForm] = useState(INITIAL_PASSWORD_FORM)
@@ -87,8 +93,19 @@ export default function My() {
     setProfile((current) => ({ ...current, regionCode: '' }))
   }
 
-  const handleRegionChange = (event) => {
-    setProfile((current) => ({ ...current, regionCode: event.target.value }))
+  const handleRegionChange = async (event) => {
+    const regionCode = event.target.value
+    setProfile((current) => ({ ...current, regionCode }))
+    if (!regionCode) return
+    try {
+      const updated = await authApi.updateProfile({ region_code: regionCode })
+      setUser(updated)
+      setActionNotice('지역 정보가 저장되었습니다.')
+    } catch (error) {
+      setProfile((current) => ({ ...current, regionCode: user.region_code }))
+      setDraftSidoCode('')
+      setActionNotice(error.message)
+    }
   }
 
   const handleProfileImage = (event) => {
@@ -98,13 +115,20 @@ export default function My() {
     setActionNotice('사진은 이 화면에서만 미리 보입니다. 서버에는 업로드되지 않았습니다.')
   }
 
-  const handleProfileFieldSubmit = () => {
-    setActionNotice('회원정보 수정은 준비 중입니다. 입력 내용은 서버에 저장되지 않았습니다.')
+  const handleProfileFieldSubmit = async (field, setEditing) => {
+    try {
+      const updated = await authApi.updateProfile({ [field]: profile[field].trim() || null })
+      setUser(updated)
+      setEditing(false)
+      setActionNotice('회원정보가 저장되었습니다.')
+    } catch (error) {
+      setActionNotice(error.message)
+    }
   }
 
-  const handleProfileFieldToggle = (isEditing, setEditing) => {
+  const handleProfileFieldToggle = (field, isEditing, setEditing) => {
     if (isEditing) {
-      handleProfileFieldSubmit()
+      handleProfileFieldSubmit(field, setEditing)
       return
     }
     setEditing(true)
@@ -120,7 +144,7 @@ export default function My() {
     })
   }
 
-  const handlePasswordSubmit = (event) => {
+  const handlePasswordSubmit = async (event) => {
     event.preventDefault()
     const nextErrors = {}
     if (!passwordForm.currentPassword) nextErrors.currentPassword = '현재 비밀번호를 입력해주세요.'
@@ -140,7 +164,16 @@ export default function My() {
       return
     }
 
-    setActionNotice('입력 형식만 확인했습니다. 비밀번호는 변경되지 않았습니다.')
+    try {
+      await authApi.changePassword({ current_password: passwordForm.currentPassword,
+        new_password: passwordForm.newPassword })
+      setPasswordForm(INITIAL_PASSWORD_FORM)
+      setActionNotice('비밀번호가 변경되었습니다. 다시 로그인해주세요.')
+      await refreshUser()
+      moveTo('/login')
+    } catch (error) {
+      setActionNotice(error.message)
+    }
   }
 
   const handleHintChange = ({ target: { name, value } }) => {
@@ -155,7 +188,7 @@ export default function My() {
     })
   }
 
-  const handleHintSubmit = (event) => {
+  const handleHintSubmit = async (event) => {
     event.preventDefault()
     const nextErrors = {}
     if (!hintForm.currentPassword) nextErrors.currentPassword = '현재 비밀번호를 입력해주세요.'
@@ -177,15 +210,37 @@ export default function My() {
       return
     }
 
-    setActionNotice('입력 형식만 확인했습니다. 힌트 질문은 변경되지 않았습니다.')
+    try {
+      await authApi.changeHint({ current_password: hintForm.currentPassword,
+        hint_question: hintForm.securityQuestionType === CUSTOM_QUESTION
+          ? hintForm.customSecurityQuestion.trim() : hintForm.securityQuestionType,
+        hint_answer: hintForm.securityAnswer.trim() })
+      setHintForm(INITIAL_HINT_FORM)
+      await refreshUser()
+      setActionNotice('힌트 질문이 변경되었습니다.')
+    } catch (error) {
+      setActionNotice(error.message)
+    }
   }
 
-  const handleLogout = () => {
-    setActionNotice('현재 로그인 세션이 없습니다. 로그아웃 기능은 인증 API 연결 후 제공됩니다.')
+  const handleLogout = async () => {
+    try {
+      await logout()
+      moveTo('/')
+    } catch (error) {
+      setActionNotice(error.message)
+    }
   }
 
-  const handleDeleteAccount = () => {
-    setActionNotice('회원 탈퇴 기능은 준비 중입니다. 계정 정보는 삭제되지 않았습니다.')
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('회원 계정을 탈퇴하시겠습니까?')) return
+    try {
+      await authApi.deleteAccount()
+      setUser(null)
+      moveTo('/')
+    } catch (error) {
+      setActionNotice(error.message)
+    }
   }
 
   const profileName = profile.name.trim() || '이름 정보 없음'
@@ -237,7 +292,6 @@ export default function My() {
               <p>회원정보를 확인하고 변경합니다.</p>
             </div>
             <div className="my-form">
-              {/* TODO: 로그인 사용자 회원정보 조회 API 연결 */}
               <div className="my-info-list">
                 <div className="my-info-row">
                   <span className="my-info-label">아이디</span>
@@ -255,7 +309,7 @@ export default function My() {
                         onChange={handleProfileChange} placeholder="이름을 입력해주세요" />
                     ) : <p className="my-info-value">{profile.name || '미등록'}</p>}
                     <button className="my-inline-action" type="button"
-                      onClick={() => handleProfileFieldToggle(isEditingName, setIsEditingName)}>
+                      onClick={() => handleProfileFieldToggle('name', isEditingName, setIsEditingName)}>
                       {isEditingName ? '입력' : '수정'}
                     </button>
                   </div>
@@ -268,7 +322,7 @@ export default function My() {
                         onChange={handleProfileChange} placeholder="010-1234-5678" />
                     ) : <p className="my-info-value">{profile.phone || '미등록'}</p>}
                     <button className="my-inline-action" type="button"
-                      onClick={() => handleProfileFieldToggle(isEditingPhone, setIsEditingPhone)}>
+                      onClick={() => handleProfileFieldToggle('phone', isEditingPhone, setIsEditingPhone)}>
                       {isEditingPhone ? '입력' : '수정'}
                     </button>
                   </div>
@@ -302,7 +356,6 @@ export default function My() {
                   {sidoStatus === 'empty' && <small className="my-error" role="alert">선택 가능한 시/도가 없습니다.</small>}
                   {sigunguStatus === 'error' && <small className="my-error" role="alert">시/군/구 목록을 불러오지 못했습니다. 다시 선택해주세요.</small>}
                   {sigunguStatus === 'empty' && <small className="my-error" role="alert">선택 가능한 시/군/구가 없습니다.</small>}
-                  {profile.regionCode && <small className="my-help">선택 내용은 서버에 저장되지 않았습니다.</small>}
                 </div>
               </div>
             </div>

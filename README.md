@@ -427,3 +427,17 @@ D-175: 자동 초기 목표를 고정 5%/20%에서 사업 유형·지역 전망�
 서버 오프라인 검증: 프로젝트 루트에서 `backend\.venv\Scripts\python.exe -m ai_server.run_offline_tests`. 이 실행기는 외부 소켓 연결을 막으며 MySQL/LLM/API 실연동 검사를 대신하지 않습니다.
 
 미리보기는 서버의 PowerPoint(Windows) 또는 LibreOffice가 필요합니다. 로컬 서버에서 사용하려면 AI 서버를 재시작하여 새 overview/preview 코드를 적용하세요. 실행 중인 `start-dev.ps1`은 중복 시작을 생략하므로 재시작 버튼 역할이 아닙니다. Netlify Drop에는 `frontend/dist`를 다시 올리며, API 프록시/공개 로컬 서버 연결도 유지해야 합니다. [결과와 남은 확인](docs/FINAL_OFFLINE_REVIEW_20260920.md).
+
+### TP2-5 선택형 회원 인증 배포 인계 (2026-09-24)
+
+회원가입·로그인·My Page만 회원 DB를 사용합니다. Home·Dashboard·Planning·Strategy·Saved Plans와 OpenAI BYOK는 로그인 없이 계속 사용할 수 있습니다. OpenAI 키는 회원 테이블에 저장하지 않습니다.
+로컬 개발에서도 `.env`에 32자 이상 임의 `AUTH_SESSION_SECRET`을 설정해야 회원 API를 사용할 수 있습니다. Vite `5177` 프록시는 `/api`를 기존 Backend `8200`으로 전달합니다. Funnel 등 다른 공개 Origin으로 회원 기능을 시험할 때는 정확한 HTTPS Origin을 `APP_ORIGIN`에 설정합니다.
+
+1. 팀장 PC에서 최신 `Jack` 변경을 받고 Backend 환경에 `python -m pip install -r backend/requirements.txt`를 실행합니다. 기존 Backend systemd 서비스가 쓰는 Python 환경에 설치해야 합니다.
+2. 기존 `.env`의 `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`를 유지합니다. `APP_ENV=production`, `APP_ORIGIN=https://실제-서비스-도메인`, 길고 무작위인 `AUTH_SESSION_SECRET`을 팀장 PC/EC2의 `.env`에만 넣습니다. 실제 값은 Git에 올리지 않습니다.
+3. Production MySQL에서 먼저 `SHOW TABLES LIKE 'oligo_members';`와 `SHOW TABLES LIKE 'oligo_member_sessions';`를 확인하고, 새 테이블이라면 `mysql -h DB_HOST_VALUE -P DB_PORT_VALUE -u DB_USER_VALUE -p DB_NAME_VALUE < database/mysql/006_member_auth.sql`을 한 번 실행합니다. `*_VALUE`는 실제 접속값으로 바꿉니다. SQL은 `CREATE TABLE IF NOT EXISTS` 두 개뿐이며 기존 관광 데이터에 `ALTER`/`DROP`을 하지 않습니다. 이미 같은 이름의 테이블이 있다면 구조를 비교한 뒤 적용합니다.
+4. Nginx의 기존 `/api/*` → Backend 경로와 `/ai/*` → AI Server 경로를 유지합니다. 공개 서비스에 TLS 인증서와 HTTPS를 설치하고 HTTP는 HTTPS로 리다이렉트합니다. Production 회원 쿠키는 `Secure`이므로 현재 HTTP 탄력적 IP만으로는 로그인 세션이 유지되지 않습니다. Backend 내부 포트는 외부에 열지 않습니다.
+5. 기존 배포 방식으로 Backend systemd 서비스를 재시작하고 `GET /health`, `GET /api/v1/auth/me`(익명 401)를 확인합니다. Frontend는 `cd frontend && npm ci && npm run build` 후 기존 Nginx 정적 파일 경로에 `dist`를 배포합니다. AI Server/BYOK 설정은 변경할 필요가 없습니다.
+6. HTTPS URL에서 익명 Home·Dashboard·Planning·Strategy·Saved Plans, Signup, 중복 가입 차단, Login, Header, My Page 지역·프로필 수정·비밀번호 변경·Logout, 익명 `/my` 보호, 익명 BYOK 기획안 흐름을 확인합니다. 로그인 시도 제한과 세션 만료 행 정리 작업은 Production 공개 전에 운영 정책으로 추가 검토합니다.
+
+`.pem`은 팀장이 보유한 기존 파일로 EC2에 접속할 때만 사용하며 Git에 추가하거나 복사해 전달하지 않습니다. 회원 탈퇴는 본인 회원 행과 그 세션만 삭제합니다. 현재 저장 기획안은 회원 소유 구조로 바꾸지 않았습니다.

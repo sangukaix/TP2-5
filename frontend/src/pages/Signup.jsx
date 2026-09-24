@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Building2, LockKeyhole, Mail, Phone, UserRound } from 'lucide-react'
 import { useRegionCatalog } from '../features/regions/useRegionCatalog'
+import { authApi } from '../api/authApi'
 import '../App.css'
 import './Signup.css'
 import nightLogo from '../assets/logo5.png'
@@ -60,6 +61,7 @@ export default function Signup() {
   const [formData, setFormData] = useState(INITIAL_FORM)
   const [errors, setErrors] = useState({})
   const [isValidated, setIsValidated] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const { sidoOptions, sidoStatus, sigunguOptions, sigunguStatus } = useRegionCatalog(formData.sidoCode)
 
   const handleChange = ({ target: { name, value } }) => {
@@ -79,7 +81,7 @@ export default function Signup() {
     setIsValidated(false)
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
     const nextErrors = validate(formData)
     setErrors(nextErrors)
@@ -90,7 +92,23 @@ export default function Signup() {
       document.getElementById(fieldId)?.focus()
       return
     }
-    setIsValidated(true)
+    const hintQuestion = formData.securityQuestionType === CUSTOM_SECURITY_QUESTION
+      ? formData.customSecurityQuestion.trim() : formData.securityQuestionType
+    setSubmitting(true)
+    try {
+      await authApi.signup({ username: formData.userId, password: formData.password,
+        email: formData.email.trim(), phone: formData.phone.trim() || null,
+        region_code: formData.regionCode, hint_question: hintQuestion,
+        hint_answer: formData.securityAnswer.trim() })
+      setIsValidated(true)
+      window.setTimeout(() => moveTo('/login'), 900)
+    } catch (error) {
+      const field = error.code === 'DUPLICATE_USERNAME' ? 'userId'
+        : error.code === 'DUPLICATE_EMAIL' ? 'email' : 'server'
+      setErrors((current) => ({ ...current, [field]: error.message }))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -210,9 +228,10 @@ export default function Signup() {
                 </div>
               </div>
             </fieldset>
-            <button className="signup-submit" type="submit">회원가입</button>
+            <button className="signup-submit" type="submit" disabled={submitting}>회원가입</button>
+            {errors.server && <small className="signup-error" role="alert">{errors.server}</small>}
             {isValidated && <p className="signup-success" role="status">
-              입력 확인이 완료되었습니다. 회원가입 API 연결 후 처리됩니다.
+              회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.
             </p>}
             <p className="signup-login-prompt">이미 계정이 있으신가요? <a href="/login" onClick={(event) => {
               if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return

@@ -2,6 +2,8 @@ import { Component, lazy, Suspense, useEffect, useState } from 'react'
 import { resolveAppRoute } from './routes'
 import { initializeTheme } from './theme'
 import { isAdminSessionAuthenticated } from './features/admin/adminSession'
+import { AuthProvider } from './features/auth/AuthContext'
+import { useAuth } from './features/auth/useAuth'
 
 // 첫 화면에서 Leaflet·Recharts·보고서 코드를 모두 내려받지 않도록 페이지 단위로 분리합니다.
 const TourismHomePage = lazy(() => import('./pages/TourismHomePage'))
@@ -62,7 +64,7 @@ function NotFoundPage() {
 }
 
 /** 현재 페이지 수가 적어 별도 Router 의존성 없이 경로별 화면만 지연 로딩합니다. */
-export default function App() {
+function AppPages() {
   const [pathname, setPathname] = useState(() => window.location.pathname)
 
   useEffect(() => {
@@ -76,6 +78,7 @@ export default function App() {
   }, [])
 
   const route = resolveAppRoute(pathname)
+  const { authenticated, loading } = useAuth()
   const pages = {
     home: TourismHomePage,
     dashboard: TourismDashboardPage,
@@ -95,7 +98,15 @@ export default function App() {
   if (ADMIN_PAGE_IDS.has(route.pageId) && !isAdminSessionAuthenticated()) {
     return <PageErrorBoundary><Suspense fallback={<PageLoading />}><AdminLoginPage returnTo={route.canonicalPath} /></Suspense></PageErrorBoundary>
   }
+  if (route.pageId === 'my') {
+    if (loading) return <PageLoading />
+    if (!authenticated) return <PageErrorBoundary><Suspense fallback={<PageLoading />}><LoginPage /></Suspense></PageErrorBoundary>
+  }
   const Page = pages[route.pageId] || NotFoundPage
 
   return <PageErrorBoundary><Suspense fallback={<PageLoading />}><Page /></Suspense></PageErrorBoundary>
+}
+
+export default function App() {
+  return <AuthProvider><AppPages /></AuthProvider>
 }

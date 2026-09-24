@@ -26,3 +26,4 @@ joblib>=1.4,<2.0
 chromadb>=1.0,<2.0
 # 생성 기획안 기록과 Word/PPT 파일 경로를 MySQL에 저장합니다.
 PyMySQL>=1.1,<2.0
+argon2-cffi>=23.1,<26.0

@@ -1740,3 +1740,9 @@ PPT 표지의 전체 시군구명은 흰 리본과 같은 세로 좌표를 사�
 - Dashboard·Signup·My Page의 시도/시군구 선택은 기존 Backend 경계 API(`/api/v1/boundaries/sido`, `/api/v1/boundaries/sigungu?sido_code=...`)를 공통 기준으로 사용한다. 모델 준비 지역만 반환하는 `/ai/v1/regions/catalog`는 전국 행정지역 선택 목록으로 사용하지 않는다.
 - Frontend 공통 helper는 `region_code`를 문자열로 보존하고 시도 코드·시도명·시군구명·전체 지역명을 구분한다. Signup/My Page는 선택 코드만 화면 state에 유지하며 시도 변경 시 시군구 코드를 비운다.
 - 실제 회원 DB/API 연결 전에는 Signup 선택을 My Page에 복사하거나 저장 성공으로 표시하지 않는다. 향후 회원 API는 `region_code`로 지역을 식별하고 카탈로그에서 이름을 역조회한다.
+
+### D-222 TP2-5 선택형 회원 인증 (2026-09-24)
+
+- D-221의 회원 연결 대기 상태를 완료한다. Signup·Login·My Page만 MySQL 회원 API를 사용하며 관광 화면·저장 기획안·OpenAI BYOK는 익명 접근을 유지한다.
+- 기존 회원 테이블이 없어 `oligo_members`와 세션 해시 테이블을 별도 SQL로 추가한다. 비밀번호·힌트 답변은 Argon2id 해시만 저장한다. 탈퇴는 이 신규 회원 테이블의 자기 행만 삭제하며 연결된 세션은 FK cascade로 삭제한다.
+- 브라우저 인증은 7일 만료의 HttpOnly SameSite=Lax 쿠키이며 Production은 HTTPS 및 Secure 쿠키를 요구한다. 회원 변경 요청은 Origin을 확인한다. BYOK 메모리 세션 및 별도 쿠키는 수정하지 않는다.

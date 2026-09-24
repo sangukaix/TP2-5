@@ -601,3 +601,15 @@ D-175: PPT `pptx-v36-operating-capacity`, Word `strategy-docx-v13-operating-capa
 - 생성 작업 응답의 persistence_status: unknown(이전 작업 등), saved(본문 MySQL 저장 완료), failed(본문 저장 실패). 생성 완료와 저장 성공을 구분한다. 문서 변환 경고는 본문 저장 성공을 무효화하지 않는다.
 - PDF 미리보기는 보고서 전체 JSON과 PPT 렌더 버전 지문을 캐시 키로 사용한다. 동일 보고서 요청은 재변환하지 않으며 보고서/양식 변경 시 별도 결과다. Word/PPT 다운로드 계약은 유지한다. 변환 슬롯 대기 15초, Office 하위 프로세스 제한 180초이며 전체 문서 작성 시간 상한을 뜻하지 않는다.
 - ML 학습 챗봇은 OpenAI 키 부재를 전체 모델 카탈로그 계산 전에 반환한다.
+# 선택형 회원 API (TP2-5, 2026-09-24)
+
+`/api/v1/auth/signup` POST, `/api/v1/auth/login` POST, `/api/v1/auth/logout` POST,
+`/api/v1/auth/me` GET, `/api/v1/users/me` PATCH/DELETE,
+`/api/v1/auth/change-password` POST, `/api/v1/auth/change-hint` POST.
+회원 변경 요청은 같은 출처의 `Origin`과 회원 쿠키를 요구한다. Signup/Login도 허용 Origin만 처리한다.
+쿠키 이름은 `oligo_member_session`이며 BYOK의 `oligo_byok_session`과 별개다.
+`/me`의 200은 `id`, `username`, `email`, `name`, `phone`, `region_code`,
+`hint_question`, 생성·수정일만 반환한다. 익명은 401이다.
+오류는 `detail: {code, message}`를 사용한다. 중복 아이디/이메일 409,
+잘못된 로그인 401, 지역 오류 422, Origin 오류 403, DB/설정 오류 503이다.
+정확한 요청 필드와 검증은 FastAPI `/docs`의 Pydantic Schema를 따른다.

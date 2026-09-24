@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAuth } from '../features/auth/useAuth'
 import { KeyRound, LockKeyhole, Mail, UserRound } from 'lucide-react'
 import '../App.css'
 import './Login.css'
@@ -22,6 +23,7 @@ function handlePageLink(path) {
 }
 
 export default function Login() {
+  const { login } = useAuth()
   const [view, setView] = useState('login')
   const [loginData, setLoginData] = useState(INITIAL_LOGIN)
   const [loginErrors, setLoginErrors] = useState({})
@@ -49,7 +51,7 @@ export default function Login() {
     setLoginNotice('')
   }
 
-  const handleLoginSubmit = (event) => {
+  const handleLoginSubmit = async (event) => {
     event.preventDefault()
     const nextErrors = {}
     if (!loginData.userId.trim()) nextErrors.userId = '아이디를 입력해주세요.'
@@ -61,8 +63,12 @@ export default function Login() {
       return
     }
 
-    // 실제 인증 API가 연결되면 이 위치에서 요청하고 서버 응답에 따라 이동합니다.
-    setLoginNotice('로그인 인증은 준비 중입니다. 아직 계정에 로그인되지 않았습니다.')
+    try {
+      await login({ username: loginData.userId, password: loginData.password })
+      moveTo('/')
+    } catch (error) {
+      setLoginNotice(error.message)
+    }
   }
 
   const handleRecoverySubmit = (event) => {

@@ -2,23 +2,42 @@
 
 from typing import Any
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from app.schemas import BoundaryFeatureCollection
+from app.auth import router as auth_router, setting as auth_setting
 from app.services.vworld import get_sido_boundaries, get_sigungu_boundaries
 
 
 app = FastAPI(title='STAY-UP AI Backend', version='0.1.0')
+app.include_router(auth_router)
+
+
+@app.exception_handler(RequestValidationError)
+async def auth_validation_error(request: Request, exc: RequestValidationError):
+    if request.url.path.startswith(('/api/v1/auth/', '/api/v1/users/')):
+        return JSONResponse(status_code=422, content={
+            'detail': {'code': 'VALIDATION_ERROR', 'message': '입력 내용을 확인해주세요.'},
+        })
+    return await request_validation_exception_handler(request, exc)
+
 app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 
 # 개발 중 Vite 화면에서 직접 API를 확인할 수 있도록 허용합니다. 배포 시 실제 도메인으로 제한합니다.
+local_origins = [f'http://{host}:{port}' for host in ('localhost', '127.0.0.1')
+                 for port in (5173, 5175, 5176, 5177)]
+app_origin = auth_setting('APP_ORIGIN').rstrip('/')
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:5175', 'http://127.0.0.1:5175', 'http://localhost:5176', 'http://127.0.0.1:5176'],
-    allow_credentials=False,
-    allow_methods=['GET'],
+    allow_origins=(local_origins if auth_setting('APP_ENV') != 'production' else [])
+                  + ([app_origin] if app_origin else []),
+    allow_credentials=True,
+    allow_methods=['GET', 'POST', 'PATCH', 'DELETE'],
     allow_headers=['*'],
 )
 
