@@ -9,7 +9,8 @@ body:has(.my-page){min-width:320px;}
   border-radius:20px; background:linear-gradient(145deg,rgb(8 45 70 / 86%),rgb(13 38 77 / 82%));
   box-shadow:0 24px 60px rgb(0 12 30 / 48%),inset 0 1px 0 rgb(255 255 255 / 9%);
   backdrop-filter:blur(20px);}
-.my-page-heading{padding:28px 32px 0; text-align:center;}
+.my-page-heading{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap;
+  gap:10px; padding:28px 32px 0; text-align:left;}
 .my-page-heading>span{color:#69d6e2; font-size:1.3rem; font-weight:800; letter-spacing:.16em;}
 .my-page-heading h1{margin:8px 0 0; color:#fff; font-size:3.2rem; letter-spacing:-1.2px;}
 .my-page-heading p{margin:9px 0 0; color:#bcd9e6; font-size:1.4rem; line-height:1.6;}
@@ -315,3 +316,13 @@ html[data-theme='day'] .my-danger-button{
   color:#b91c1c;
   background:#fff7f7;
 }
+
+/* 26.09.25_07:40 */
+.my-oligo-world-link{display:inline-flex; align-items:center; justify-content:center;
+  min-height:36px; padding:7px 12px; border:1px solid rgb(116 216 226 / 42%);
+  border-radius:9px; color:#dffcff; background:rgb(35 137 161 / 30%);
+  font-size:1.2rem; font-weight:700; text-decoration:none; text-align:center;}
+.my-oligo-world-link:hover{border-color:#72dce6; color:#fff; background:rgb(35 137 161 / 55%);}
+.my-oligo-world-link:focus-visible{outline:2px solid #8de5ec; outline-offset:2px;}
+html[data-theme='day'] .my-oligo-world-link{border-color:#b9dce1; color:#1a7180; background:#f9fbfc;}
+html[data-theme='day'] .my-oligo-world-link:hover{border-color:#1a899b; color:#fff; background:#1a899b;}

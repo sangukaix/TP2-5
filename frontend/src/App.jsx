@@ -19,6 +19,9 @@ const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage'))
 const SignupPage = lazy(() => import('./pages/Signup'))
 const LoginPage = lazy(() => import('./pages/Login'))
 const MyPage = lazy(() => import('./pages/My'))
+const OligoWorld = lazy(() => import('./GAME/Oligo-world/OligoWorld'))
+const GameHub = lazy(() => import('./GAME/GameHub'))
+const LadderGame = lazy(() => import('./GAME/Ladder-game/LadderGame'))
 const ADMIN_PAGE_IDS = new Set(['mlTest', 'openAiLearning', 'reactLearning', 'llmControl', 'projectTree'])
 
 // 학습 주제별 wrapper를 App 바깥에 두어 화면이 다시 그려져도 챗봇 상태가 초기화되지 않게 합니다.
@@ -94,6 +97,9 @@ function AppPages() {
     signup: SignupPage,
     login: LoginPage,
     my: MyPage,
+    game: GameHub,
+    oligoWorld: OligoWorld,
+    ladderGame: LadderGame,
   }
   if (ADMIN_PAGE_IDS.has(route.pageId) && !isAdminSessionAuthenticated()) {
     return <PageErrorBoundary><Suspense fallback={<PageLoading />}><AdminLoginPage returnTo={route.canonicalPath} /></Suspense></PageErrorBoundary>

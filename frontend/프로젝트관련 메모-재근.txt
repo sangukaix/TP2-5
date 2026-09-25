@@ -62,13 +62,13 @@ Signup UI ✅
    ↓
 Login UI 
    ↓
-My Page UI                                 ← 지금
+My Page UI                                 
    ↓
 Frontend 3개 완성
    ↓
 회원 DB schema 확인
    ↓
-Signup API
+Signup API                             ← 지금
    ↓
 Login API + password hash
    ↓
@@ -77,6 +77,25 @@ Session/JWT/Cookie
 My Page 실제 사용자 정보 연결
    ↓
 AWS MySQL 실제 검증
+
+
+
+9/25 - GAME
+/game 독립 route와 빈 Oligo World 화면
+My Page MY PAGE 오른쪽에 [Oligo World로 이동]
+생성 중 취소 버튼 오른쪽에 [기다리는 동안 Oligo World로 이동]
+두 버튼 모두 새 창/탭으로 /game
+아주 작은 실제 플레이 가능한 게임 prototype
+점수 / EXP / Level 시스템
+게임 HUD
+Oligo World 한국 전통+현대+미래 Visual Identity
+checkpoint/autosave 구조만 만들어 놓기
+다음 주 회원 DB 완료
+user_id + region_code + game stats 실제 DB 연결
+개인 Ranking
+지역 Ranking
+전국 점령 지도
+
 
 
 

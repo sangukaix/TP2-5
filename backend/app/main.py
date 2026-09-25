@@ -11,16 +11,18 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 from app.schemas import BoundaryFeatureCollection
 from app.auth import router as auth_router, setting as auth_setting
+from app.game_profile import router as game_router
 from app.services.vworld import get_sido_boundaries, get_sigungu_boundaries
 
 
 app = FastAPI(title='STAY-UP AI Backend', version='0.1.0')
 app.include_router(auth_router)
+app.include_router(game_router)
 
 
 @app.exception_handler(RequestValidationError)
 async def auth_validation_error(request: Request, exc: RequestValidationError):
-    if request.url.path.startswith(('/api/v1/auth/', '/api/v1/users/')):
+    if request.url.path.startswith(('/api/v1/auth/', '/api/v1/users/', '/api/v1/game/')):
         return JSONResponse(status_code=422, content={
             'detail': {'code': 'VALIDATION_ERROR', 'message': '입력 내용을 확인해주세요.'},
         })

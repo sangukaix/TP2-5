@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "test": "node --test src/routes.test.js src/api/*.test.js src/features/admin/*.test.js src/features/auth/*.test.mjs src/features/planning/*.test.js src/features/planning/*.test.mjs src/features/regions/*.test.js",
+    "test": "node --test src/routes.test.js src/api/*.test.js src/features/admin/*.test.js src/features/auth/*.test.mjs src/features/planning/*.test.js src/features/planning/*.test.mjs src/features/regions/*.test.js src/GAME/*.test.mjs src/GAME/Ladder-game/*.test.js src/GAME/Oligo-world/*.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -263,6 +263,9 @@ export default function My() {
         <div className="my-overview-card">
           <div className="my-page-heading">
             <h1 id="my-title">MY PAGE</h1>
+            <a className="my-oligo-world-link" href="/game/oligo-world" target="_blank" rel="noopener noreferrer">
+              Oligo World로 이동
+            </a>
           </div>
           <section className="my-profile-card" aria-labelledby="my-profile-title">
             <div className="my-profile-image">

@@ -1,0 +1,97 @@
+/* 26.09.25_09:50 */
+.ladder-game-page{min-height:100vh; padding:28px 20px 70px; color:#17304c;
+  background:radial-gradient(circle at 85% 2%,#c9eef0 0%,transparent 38%),
+    linear-gradient(155deg,#e7f4fa 0%,#faf6f0 65%,#fff4e5 100%);}
+.ladder-game-shell{width:min(100%,920px); margin:0 auto;}
+.ladder-game-nav{display:flex; justify-content:space-between; gap:16px;}
+.ladder-game-nav a{color:#215a77; font-size:1.3rem; font-weight:750; text-decoration:none;}
+.ladder-game-nav a:hover{text-decoration:underline;}
+.ladder-game-header{margin:32px 0 28px; padding:28px 18px; border-radius:20px;
+  text-align:center; background:linear-gradient(115deg,#113458,#174966 65%,#42627a);
+  box-shadow:0 14px 36px rgb(19 57 87 / 18%);}
+.ladder-game-header span{color:#aaf2ea; font-size:1.2rem; font-weight:800; letter-spacing:.16em;}
+.ladder-game-header h1{display:flex; align-items:center; justify-content:center; gap:10px;
+  margin:10px 0; color:#fff9ef; font-size:clamp(2.7rem,6vw,4.2rem);}
+.ladder-game-title-icon{width:.85em; height:.85em; flex:none; color:#f2c78f;}
+.ladder-game-header p{margin:0; color:#d7ebe9; font-size:1.5rem; line-height:1.6;}
+.ladder-game-setup,.ladder-game-play{padding:28px; border:1px solid #bad4dc;
+  border-radius:22px; background:#fff; box-shadow:0 18px 46px rgb(36 85 115 / 14%);}
+.ladder-game-section-heading{display:flex; align-items:baseline; justify-content:space-between;
+  flex-wrap:wrap; gap:8px 16px;}
+.ladder-game-section-heading h2{margin:0; color:#173958; font-size:2.2rem;}
+.ladder-game-section-heading span{color:#637e90; font-size:1.3rem;}
+.ladder-game-help{margin:10px 0 24px; color:#637e90; font-size:1.3rem; line-height:1.6;}
+.ladder-game-entries{display:grid; gap:12px;}
+.ladder-game-entry{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;
+  align-items:end; gap:12px; padding:14px; border:1px solid #dce9ea; border-radius:14px;
+  background:#f7fbfb;}
+.ladder-game-field{min-width:0;}
+.ladder-game-field label{display:block; margin-bottom:7px; color:#33586e;
+  font-size:1.2rem; font-weight:750;}
+.ladder-game-field input{box-sizing:border-box; width:100%; min-height:42px; padding:9px 11px;
+  border:1px solid #c5dce3; border-radius:9px; color:#17304c; background:#fff;
+  font:inherit; font-size:1.4rem;}
+.ladder-game-field input:focus-visible{outline:2px solid #27a5b3; outline-offset:2px;}
+.ladder-game-remove,.ladder-game-add,.ladder-game-primary,.ladder-game-play-actions button,
+.ladder-game-reveal button{min-height:42px; padding:9px 15px; border:1px solid #c5dce3;
+  border-radius:9px; color:#245b72; background:#fff; font:inherit; font-size:1.3rem;
+  font-weight:750; cursor:pointer;}
+.ladder-game-remove:disabled,.ladder-game-add:disabled{cursor:not-allowed; opacity:.5;}
+.ladder-game-remove:hover:not(:disabled),.ladder-game-add:hover:not(:disabled),
+.ladder-game-play-actions button:hover,.ladder-game-reveal button:hover{background:#e9f8f9;}
+.ladder-game-error{margin:16px 0 0; color:#b42336; font-size:1.3rem; font-weight:700;}
+.ladder-game-setup-actions,.ladder-game-play-actions{display:flex; flex-wrap:wrap; gap:10px;
+  margin-top:22px;}
+.ladder-game-primary{margin-left:auto; border-color:#176d83; color:#fff; background:#176d83;}
+.ladder-game-primary:hover{background:#125c71;}
+.ladder-game-board-scroll{max-width:100%; margin-top:22px; overflow-x:auto; padding-bottom:12px;}
+.ladder-game-board{margin:0 auto;}
+.ladder-game-participants,.ladder-game-results{display:grid;
+  grid-template-columns:repeat(var(--ladder-columns),minmax(0,1fr)); text-align:center;}
+.ladder-game-participants button{min-height:52px; margin:0 4px; padding:6px;
+  border:1px solid #87cbd5; border-radius:9px; color:#18526c; background:#eefafb;
+  font:inherit; font-size:.9rem; font-weight:750; overflow-wrap:anywhere; cursor:pointer;}
+.ladder-game-participants button:hover,.ladder-game-participants button[aria-pressed='true']{
+  border-color:#168aa1; background:#d8f4f4;}
+.ladder-game-svg{display:block; max-width:none; margin:8px 0;}
+.ladder-game-vertical{stroke:#7eaaba; stroke-width:4; stroke-linecap:round;}
+.ladder-game-rung{stroke:#337b9c; stroke-width:5; stroke-linecap:round;}
+.ladder-game-trace{fill:none; stroke:#d66d30; stroke-width:8; stroke-linecap:round;
+  stroke-linejoin:round; stroke-dasharray:100; stroke-dashoffset:100;
+  animation:ladder-game-trace-path 2.2s linear forwards;}
+@keyframes ladder-game-trace-path{to{stroke-dashoffset:0;}}
+.ladder-game-results span{margin:0 4px; padding:8px 4px; border-radius:9px;
+  color:#36516b; background:#f1f5fa; font-size:1.2rem; font-weight:700; overflow-wrap:anywhere;}
+.ladder-game-reveal{display:grid; justify-items:center; gap:10px; margin-top:22px;
+  padding:22px; border:1px solid #e5b987; border-radius:16px; text-align:center;
+  background:#fff5e7;}
+.ladder-game-reveal span{color:#5b5060; font-size:1.5rem;}
+.ladder-game-reveal strong{color:#a25217; font-size:2.7rem; overflow-wrap:anywhere;}
+.ladder-game-reveal button{min-height:36px; margin-top:4px;}
+.ladder-game-all-results{margin-top:22px; padding:18px; border:1px solid #d2e6e9;
+  border-radius:14px; background:#f8fcfd;}
+.ladder-game-all-results h3{margin:0 0 12px; font-size:1.8rem;}
+.ladder-game-all-results ul{display:grid; gap:8px; margin:0; padding:0; list-style:none;}
+.ladder-game-all-results li{display:flex; justify-content:space-between; gap:12px;
+  padding:8px 0; border-bottom:1px solid #e0edf0; font-size:1.4rem;}
+.ladder-game-all-results li:last-child{border-bottom:0;}
+.ladder-game-all-results strong{color:#176d83; text-align:right; overflow-wrap:anywhere;}
+.ladder-game-page button:focus-visible,.ladder-game-page a:focus-visible{
+  outline:2px solid #168aa1; outline-offset:3px;}
+@media(max-width:500px){
+  .ladder-game-page{padding:20px 12px 48px;}
+  .ladder-game-header{margin:26px 0 20px;}
+  .ladder-game-header p{font-size:1.3rem;}
+  .ladder-game-setup,.ladder-game-play{padding:18px 12px; border-radius:16px;}
+  .ladder-game-section-heading h2{font-size:1.9rem;}
+  .ladder-game-entry{grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; padding:10px;}
+  .ladder-game-remove{grid-column:1 / -1; justify-self:end; min-height:34px;}
+  .ladder-game-setup-actions>*{flex:1 1 auto;}
+  .ladder-game-primary{margin-left:0;}
+}
+@media(prefers-reduced-motion:reduce){
+  .ladder-game-trace{animation:none; stroke-dashoffset:0;}
+}
+
+/* 26.09.25_10:01 */
+body:has(.ladder-game-page){margin:0;}

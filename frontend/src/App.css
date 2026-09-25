@@ -3773,7 +3773,7 @@ html[data-theme='day'] .workspace-shell:has(.dashboard-section) .region-selectio
 .byok-connection.is-compact p {font-size: .85rem;}
 
 /* 26.09.22_15:56 */
-.strategy-start--loading .strategy-job-cancel {margin-top: 20px; border: 1px solid #dc2626; color: #b91c1c;
+.strategy-start--loading .strategy-job-cancel {margin-top: 0; border: 1px solid #dc2626; color: #b91c1c;
   background: #fff; box-shadow: none; font-weight: 750;}
 .strategy-start--loading .strategy-job-cancel:hover:not(:disabled) {color: #991b1b; background: #fff1f2;}
 .strategy-start--loading .strategy-job-cancel:disabled {border-color: #f1a6ae; color: #b86d75;
@@ -4076,3 +4076,14 @@ html[data-theme='day'] .global-header-actions .header-username{color:#173b57;}
 @media(max-width:500px){
   .global-header-actions .header-username{font-size:1.1rem;}
 }
+
+/* 26.09.25_07:40 */
+.strategy-start--loading .strategy-job-actions{display:flex; align-items:center; justify-content:center;
+  flex-wrap:wrap; gap:10px; max-width:100%; margin-top:20px;}
+.strategy-start--loading .strategy-job-game-link{display:inline-flex; align-items:center;
+  justify-content:center; min-height:40px; padding:10px 14px; border:1px solid #6c9bd4;
+  border-radius:6px; color:#1d4ed8; background:#fff; font-size:1.2rem;
+  font-weight:650; text-align:center; text-decoration:none;}
+.strategy-start--loading .strategy-job-game-link:hover{border-color:#1d4ed8; background:#eff6ff;}
+.strategy-start--loading .strategy-job-game-link:focus-visible{outline:2px solid #1d4ed8;
+  outline-offset:2px;}

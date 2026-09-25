@@ -1746,3 +1746,22 @@ PPT 표지의 전체 시군구명은 흰 리본과 같은 세로 좌표를 사�
 - D-221의 회원 연결 대기 상태를 완료한다. Signup·Login·My Page만 MySQL 회원 API를 사용하며 관광 화면·저장 기획안·OpenAI BYOK는 익명 접근을 유지한다.
 - 기존 회원 테이블이 없어 `oligo_members`와 세션 해시 테이블을 별도 SQL로 추가한다. 비밀번호·힌트 답변은 Argon2id 해시만 저장한다. 탈퇴는 이 신규 회원 테이블의 자기 행만 삭제하며 연결된 세션은 FK cascade로 삭제한다.
 - 브라우저 인증은 7일 만료의 HttpOnly SameSite=Lax 쿠키이며 Production은 HTTPS 및 Secure 쿠키를 요구한다. 회원 변경 요청은 Origin을 확인한다. BYOK 메모리 세션 및 별도 쿠키는 수정하지 않는다.
+
+### D-223 Oligo World 공개 진입 기반 (2026-09-25)
+
+- `/game`은 인증 없이 접근하는 독립 React route로 둔다. 게임 전용 화면과 CSS는 `frontend/src/GAME/Oligo-world/`에 격리한다.
+- My Page 제목 옆과 기획서 생성 중 취소 버튼 옆에서 새 탭으로 `/game`을 연다. 생성·취소·진행 조회와 BYOK 상태는 기존 탭에서 그대로 유지한다.
+- 이 단계는 시작 화면만 제공하며 게임 엔진, 점수, 저장, 순위, Backend 또는 DB 연결을 추가하지 않는다.
+
+### D-224 GAME Hub와 저장 없는 Quick Game (2026-09-25)
+
+- `/game`은 공개 GAME Hub로 바꾸고 기존 Oligo World 화면을 `/game/oligo-world`에서 재사용한다. `/game/ladder`는 별도 폴더의 점심메뉴 사다리게임이다. 세 경로 모두 익명 접근을 허용한다.
+- 업무 화면에서 Oligo World로 들어가는 두 링크는 새 탭을 유지한다. GAME 내부 링크는 기존 `pushState`/`popstate` 라우팅으로 이동하고 브라우저 뒤로가기를 지원한다.
+- 사다리 가로선이 실제 결과 순열을 결정한다. 2~8명, 개별 경로 공개, 전체 결과와 다시 하기를 제공하지만 회원·DB·브라우저 저장소에는 기록하지 않는다.
+
+### D-225 Oligo World 회원별 게임 프로필 (2026-09-25)
+
+- 공개 GAME Hub와 저장 없는 Ladder는 그대로 유지하고, Oligo World RPG만 기존 HttpOnly 회원 세션으로 시작한다. 익명 사용자는 로그인 안내를 본다.
+- `007_oligo_game_profile.sql`은 회원당 한 행의 `oligo_game_profiles`를 별도로 추가한다. DRAFT 설정은 서버에 자동 저장하고 ACTIVE는 생성 완료 후 map001 진행을 저장한다. 회원 지역은 최초 제안값이며 게임 지역 코드는 독립 보존한다.
+- 게임 닉네임은 2~16자 한글·영문·숫자·밑줄로 제한하고 ACTIVE 닉네임만 DB UNIQUE로 관리한다. 미완성 DRAFT는 닉네임을 선점하지 않는다. 여행 스타일은 10개 안정 ID 중 하나만 선택하며 향후 스킬과 연결한다.
+- Tutorial 보상 EXP 10/W 10은 서버에서 한 번만 지급한다. 캐릭터·닉네임·지역 변경은 미구현이며 향후 최소 Level(미정)과 5,000 W 비용 정책을 적용할 수 있게 둔다. 실제 MySQL 적용은 별도 환경에서 검증한다.

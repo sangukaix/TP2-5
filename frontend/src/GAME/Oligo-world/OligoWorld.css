@@ -1,0 +1,254 @@
+/* 26.09.25_07:40 */
+.oligo-world-page{display:grid; min-height:100vh; place-items:center; padding:28px 20px 42px;
+  color:#edf8ff; background:radial-gradient(circle at 50% 0%,#163969 0%,#081932 62%,#071429 100%);}
+.oligo-world-shell{box-sizing:border-box; width:min(100%,1260px); overflow:hidden;
+  border:1px solid rgb(154 191 223 / 38%); border-radius:26px; text-align:center;
+  background:#0d2341; box-shadow:0 26px 70px rgb(1 9 28 / 52%);}
+.oligo-world-shell::before{display:none;}
+.oligo-world-eyebrow{margin:0; color:#aaf2ea; font-size:1.2rem; font-weight:700;
+  letter-spacing:.2em;}
+.oligo-world-title{margin:14px 0 0; color:#fff9ef; font-size:clamp(3.8rem,7vw,7.2rem);
+  letter-spacing:.09em; line-height:1.1; text-shadow:0 4px 30px rgb(4 18 41 / 85%);}
+.oligo-world-description{margin:16px 0 0; color:#f2e0d5; font-size:clamp(1.5rem,2vw,1.9rem);
+  line-height:1.7; text-wrap:balance; text-shadow:0 2px 14px #071429;}
+.oligo-world-status{display:inline-block; margin:26px 0 0; padding:10px 20px;
+  border:1px solid rgb(242 199 143 / 80%); border-radius:99px;
+  color:#1a3044; background:#f2c78f; font:inherit; font-size:1.3rem; font-weight:800;
+  letter-spacing:.12em; text-decoration:none; cursor:pointer;}
+.oligo-world-status:hover{background:#ffe0b2;}
+.oligo-world-status:focus-visible{outline:2px solid #fff; outline-offset:4px;}
+.oligo-world-home-link{display:block; width:fit-content; margin:0; color:#d6eaff;
+  font-size:1.3rem; text-decoration:underline; text-underline-offset:4px;}
+.oligo-world-home-link:hover{color:#fff;}
+.oligo-world-home-link:focus-visible{outline:2px solid #86e9eb; outline-offset:4px;}
+
+/* 26.09.25_09:46 */
+.oligo-world-mini-game{display:grid; justify-items:center; gap:8px; margin:0;}
+.oligo-world-mini-game span{color:#86e9eb; font-size:1.1rem; font-weight:750; letter-spacing:.16em;}
+.oligo-world-mini-game a{display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  min-height:42px; padding:9px 16px; border:1px solid rgb(134 233 235 / 56%);
+  border-radius:10px; color:#edf8ff; background:rgb(50 115 157 / 35%);
+  font-size:1.4rem; font-weight:700; text-decoration:none;}
+.oligo-world-mini-game a:hover{background:rgb(50 115 157 / 60%);}
+.oligo-world-mini-icon{width:1.7rem; height:1.7rem; flex:none;}
+.oligo-world-hub-link{display:block; width:fit-content; margin:0;
+  color:#b4f7f2; font-size:1.2rem; text-decoration:none;}
+.oligo-world-hub-link:hover{text-decoration:underline;}
+.oligo-world-mini-game a:focus-visible,.oligo-world-hub-link:focus-visible{
+  outline:2px solid #86e9eb; outline-offset:4px;}
+
+/* 26.09.25_10:01 */
+body:has(.oligo-world-page){margin:0;}
+
+/* 26.09.25_10:23 */
+.oligo-world-stage{display:grid; min-height:clamp(440px,48vw,660px); align-items:start;
+  overflow:hidden; background:#0a2852;}
+.oligo-world-art{grid-column:1; grid-row:1; display:block; width:100%; height:auto;
+  align-self:end; object-fit:contain;}
+.oligo-world-hero-copy{grid-column:1; grid-row:1; z-index:1; padding:clamp(36px,5vw,72px) 20px;
+  background:linear-gradient(180deg,rgb(4 20 48 / 78%),rgb(4 20 48 / 25%) 75%,transparent);}
+.oligo-world-footer{display:flex; align-items:center; justify-content:space-between; gap:20px;
+  padding:18px 28px; border-top:1px solid rgb(154 191 223 / 30%); background:#0c2746;}
+@media(max-width:500px){
+  .oligo-world-page{padding:16px 12px 36px;}
+  .oligo-world-stage{display:flex; flex-direction:column; min-height:0;}
+  .oligo-world-art{width:100%; order:0;}
+  .oligo-world-hero-copy{order:1; width:100%; box-sizing:border-box; padding:26px 16px 32px;
+    background:linear-gradient(180deg,#102d52,#0a2342);}
+  .oligo-world-title{font-size:clamp(3.2rem,10vw,4.8rem);}
+  .oligo-world-description{font-size:1.5rem;}
+  .oligo-world-footer{flex-wrap:wrap; justify-content:center; padding:20px 16px;}
+  .oligo-world-mini-game{order:-1; width:100%;}
+}
+
+/* 26.09.25_13:24 */
+.oligo-world-frame{width:min(100%,1260px);}
+.oligo-world-shell--footer{margin-top:12px; border-radius:16px;}
+.oligo-world-game-shell{box-sizing:border-box; min-height:620px; padding:24px;
+  border:1px solid rgb(154 191 223 / 38%); border-radius:26px;
+  background:linear-gradient(145deg,#102748,#091a33); box-shadow:0 26px 70px rgb(1 9 28 / 52%);}
+.oligo-world-game-header{display:flex; align-items:center; justify-content:space-between; gap:16px;
+  margin-bottom:20px; color:#aaf2ea; font-size:1.2rem; letter-spacing:.16em;}
+.oligo-world-game-header strong{color:#f2c78f; font-size:1.1rem; font-weight:700;}
+.oligo-world-select{text-align:center;}
+.oligo-world-select-kicker{margin:18px 0 8px; color:#aaf2ea; font-size:1.1rem;
+  font-weight:800; letter-spacing:.18em;}
+.oligo-world-select h2{margin:0; color:#fff9ef; font-size:clamp(2rem,3vw,3.2rem);}
+.oligo-world-select>p:not(.oligo-world-select-kicker){color:#c9d9e9; font-size:1.3rem;}
+.oligo-world-hud{display:flex; align-items:center; flex-wrap:wrap; gap:8px 20px;
+  margin-bottom:16px; padding:12px 18px; border:1px solid rgb(154 191 223 / 35%);
+  border-radius:14px; color:#e5f2fa; background:#163653; font-size:1.2rem;}
+.oligo-world-hud-hero{display:flex; align-items:center; gap:10px;}
+.oligo-world-hud-hero strong{color:#fff9ef; font-size:1.4rem;}
+.oligo-world-hud-hero span{color:#f2c78f; font-weight:800;}
+.oligo-world-hud-money{color:#f2c78f; font-weight:800;}
+.oligo-world-hud-map{margin-left:auto; color:#aaf2ea;}
+.oligo-world-play-layout{display:grid; grid-template-columns:minmax(0,1fr) minmax(180px,240px);
+  align-items:start; gap:16px;}
+.oligo-world-viewport{position:relative; min-width:0; padding:14px; overflow:hidden;
+  border:1px solid rgb(161 203 224 / 46%); border-radius:18px;
+  background:linear-gradient(180deg,#1d3457,#102943);}
+.oligo-world-viewport:focus-visible{outline:2px solid #aaf2ea; outline-offset:3px;}
+.oligo-world-viewport--forest{background:linear-gradient(180deg,#538aa7,#aec9ad 44%,#346044);}
+.oligo-world-scene-heading{position:relative; z-index:1; display:flex; gap:12px;
+  align-items:center; margin-bottom:10px; color:#d6e9f5; font-size:1.1rem;}
+.oligo-world-scene-heading span{color:#aaf2ea; letter-spacing:.12em;}
+.oligo-world-scene-heading strong{color:#fff9ef; font-size:1.3rem;}
+.oligo-world-map-frame{position:relative; z-index:1; display:flex; justify-content:center;
+  max-width:100%; overflow-x:auto; overflow-y:hidden;}
+.oligo-world-map{--oligo-tile:min(4vw,3.8rem); position:relative; display:grid;
+  grid-template-columns:repeat(var(--oligo-columns),var(--oligo-tile));
+  grid-template-rows:repeat(var(--oligo-rows),var(--oligo-tile));
+  width:max-content; flex:none; border:4px solid #102639; box-shadow:0 14px 30px rgb(1 10 22 / 48%);}
+.oligo-world-tile{box-sizing:border-box; display:grid; place-items:center;
+  width:var(--oligo-tile); height:var(--oligo-tile);
+  border:1px solid rgb(30 55 58 / 10%);
+  background:repeating-linear-gradient(0deg,#ae865d 0 3px,#b68e65 3px 12px);}
+.oligo-world-tile--wall{border-color:#4a5148; background:linear-gradient(135deg,#6f6759,#494b47);}
+.oligo-world-tile--bed{border:3px solid #825b50; background:linear-gradient(135deg,#d4d8cd,#798b9a);}
+.oligo-world-tile--table{border:4px solid #573928; border-radius:6px; background:#9a653e;}
+.oligo-world-tile--shelf{border:4px solid #4f3329;
+  background:repeating-linear-gradient(90deg,#98734b 0 8px,#5a4137 8px 13px);}
+.oligo-world-tile--door{border:3px solid #f2c78f; color:#fff6da; background:#745234;
+  box-shadow:inset 0 0 18px #f5cb81,0 0 16px rgb(249 216 146 / 75%);
+  font-size:.8rem; font-weight:800;}
+.oligo-world-viewport--forest .oligo-world-tile--floor{background:#6d9b67;}
+.oligo-world-tile--pine{background:#3e7654;}
+.oligo-world-tile--pine::after{width:78%; height:88%; content:''; background:#174d39;
+  clip-path:polygon(50% 0,90% 60%,70% 60%,100% 90%,0 90%,30% 60%,10% 60%);}
+.oligo-world-tile--rock{border-radius:30%; background:linear-gradient(140deg,#a8b5ab,#607b7b);}
+.oligo-world-tile--house{border:2px solid #715340; background:linear-gradient(135deg,#b68657,#805b43);}
+.oligo-world-player{position:absolute; z-index:2; left:calc(var(--oligo-x)*var(--oligo-tile));
+  top:calc(var(--oligo-y)*var(--oligo-tile)); display:grid; place-items:center;
+  width:var(--oligo-tile); height:var(--oligo-tile); border-radius:50%;
+  background:radial-gradient(circle,rgb(255 244 195 / 55%),transparent 75%);
+  transition:left .13s ease-out,top .13s ease-out; pointer-events:none;}
+.oligo-world-player .oligo-world-character-sprite{display:block; width:100%; height:100%;
+  object-fit:contain; filter:drop-shadow(0 3px 3px #13253c);}
+.oligo-world-controls{position:relative; z-index:1; margin:10px 0 0;
+  color:#d6e9f5; font-size:1rem; text-align:center;}
+.oligo-world-play-aside{display:grid; gap:14px;}
+.oligo-world-mission{padding:18px; border:1px solid rgb(161 203 224 / 44%);
+  border-radius:16px; color:#d5e9f1; background:#193754;}
+.oligo-world-mission>span{color:#aaf2ea; font-size:1rem; font-weight:800; letter-spacing:.16em;}
+.oligo-world-mission h2{margin:10px 0 16px; color:#fff9ef; font-size:1.5rem;}
+.oligo-world-mission p{margin:8px 0; font-size:1.1rem; line-height:1.5;}
+.oligo-world-mission strong{color:#f2c78f; font-size:1.3rem;}
+.oligo-world-mission-done{color:#aaf2ea;}
+.oligo-world-mission-door{padding-top:12px; border-top:1px solid rgb(161 203 224 / 30%);}
+.oligo-world-play-hint{margin:0; color:#bdd5e4; font-size:1rem; line-height:1.5;}
+.oligo-world-dialogue{display:flex; align-items:center; gap:18px; margin-top:16px;
+  padding:14px 18px; border:1px solid #d7b885; border-radius:16px;
+  background:linear-gradient(120deg,#203a5b,#243450);}
+.oligo-world-dialogue-portrait{width:76px; height:86px; flex:none; object-fit:cover;
+  object-position:center top;}
+.oligo-world-dialogue-copy{flex:1; min-width:0;}
+.oligo-world-dialogue-copy strong{color:#f2c78f; font-size:1.3rem;}
+.oligo-world-dialogue-copy p{margin:5px 0 0; color:#fff9ef; font-size:1.3rem; line-height:1.5;}
+.oligo-world-dialogue button,.oligo-world-clear button{padding:9px 16px;
+  border:1px solid #f2c78f; border-radius:10px; color:#193047; background:#f2c78f;
+  font:inherit; font-size:1.1rem; font-weight:800; cursor:pointer;}
+.oligo-world-dialogue button:hover,.oligo-world-clear button:hover{background:#ffe0b2;}
+.oligo-world-dialogue button:focus-visible,.oligo-world-clear button:focus-visible{
+  outline:2px solid #fff; outline-offset:3px;}
+.oligo-world-clear{position:fixed; z-index:20; inset:0; display:grid; place-content:center;
+  justify-items:center; gap:14px; padding:20px; text-align:center;
+  color:#fff9ef; background:rgb(4 16 37 / 88%);}
+.oligo-world-clear span{color:#aaf2ea; font-size:1.5rem; font-weight:800; letter-spacing:.18em;}
+.oligo-world-clear h2{margin:0; font-size:clamp(2.2rem,5vw,4rem);}
+.oligo-world-clear p{margin:0; color:#f2c78f; font-size:1.8rem; font-weight:800;}
+.oligo-world-clear b{padding:0 10px; color:#aaf2ea;}
+@media(max-width:500px){
+  .oligo-world-game-shell{min-height:0; padding:16px 10px; border-radius:18px;}
+  .oligo-world-game-header{flex-wrap:wrap; margin-bottom:14px;}
+  .oligo-world-hud{gap:7px 12px; padding:10px; font-size:1rem;}
+  .oligo-world-hud-map{margin-left:0; width:100%;}
+  .oligo-world-play-layout{grid-template-columns:minmax(0,1fr);}
+  .oligo-world-viewport{padding:8px;}
+  .oligo-world-map{--oligo-tile:6.5vw; border-width:2px;}
+  .oligo-world-play-aside{gap:8px;}
+  .oligo-world-mission{padding:12px;}
+  .oligo-world-dialogue{flex-wrap:wrap; gap:8px; padding:10px;}
+  .oligo-world-dialogue-portrait{width:52px; height:62px;}
+  .oligo-world-dialogue-copy p{font-size:1.1rem;}
+  .oligo-world-dialogue button{margin-left:auto;}
+}
+@media(prefers-reduced-motion:reduce){
+  .oligo-world-player{transition:none;}
+}
+
+/* 26.09.25_13:36 */
+.oligo-world-map--illustrated{background-size:cover; background-position:center;}
+.oligo-world-map--illustrated .oligo-world-tile{border-color:transparent; background:transparent;}
+.oligo-world-map--illustrated .oligo-world-tile--pine::after{display:none;}
+.oligo-world-map--illustrated .oligo-world-tile--door{border-color:#f2c78f;
+  color:#fff; background:rgb(74 39 18 / 42%);
+  box-shadow:inset 0 0 18px #f5cb81,0 0 16px rgb(249 216 146 / 85%);}
+
+/* 26.09.25_13:56 */
+.oligo-world-guest-hub{display:block; width:fit-content; margin:14px auto 0;
+  color:#b4f7f2; font-size:1.2rem; text-underline-offset:4px;}
+.oligo-world-guest-hub:focus-visible{outline:2px solid #86e9eb; outline-offset:4px;}
+.oligo-world-creation-layout{display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);
+  gap:24px; align-items:start; max-width:1100px; margin:24px auto 0; text-align:left;}
+.oligo-world-creation-visual{display:grid; justify-items:center; align-content:start;
+  min-width:0; padding:22px; border:1px solid rgb(242 199 143 / 42%); border-radius:22px;
+  background:radial-gradient(circle at 50% 50%,#406092,#152d57 62%,#0c203d);}
+.oligo-world-creation-step{justify-self:start; color:#aaf2ea; font-size:1.2rem;
+  font-weight:800; letter-spacing:.12em;}
+.oligo-world-creation-visual h3{margin:10px 0 0; color:#fff9ef;
+  font-size:clamp(2.5rem,4vw,4rem); letter-spacing:.12em;}
+.oligo-world-creation-visual p{margin:4px 0 0; color:#d8e9f5; font-size:1.3rem;}
+.oligo-world-creation-visual .oligo-world-character-sprite{width:100%; height:360px;
+  margin-top:8px; object-fit:contain; object-position:center bottom;
+  filter:drop-shadow(0 20px 25px rgb(0 10 30 / 55%));}
+.oligo-world-carousel-controls{display:flex; align-items:center; justify-content:space-between;
+  width:min(100%,300px); margin-top:8px; color:#f2c78f; font-size:1.3rem;}
+.oligo-world-carousel-controls button{width:42px; height:42px; border:1px solid #d9c99e;
+  border-radius:50%; color:#fff9ef; background:#21466c; font:inherit; cursor:pointer;}
+.oligo-world-carousel-controls button:hover{background:#356c91;}
+.oligo-world-creation-form{display:grid; gap:14px; min-width:0;}
+.oligo-world-creation-label{display:grid; gap:8px; color:#aaf2ea;
+  font-size:1.2rem; font-weight:800;}
+.oligo-world-creation-label input,.oligo-world-creation-regions select{box-sizing:border-box;
+  width:100%; min-height:43px; padding:10px 12px; border:1px solid #6c94ae; border-radius:10px;
+  color:#fff9ef; background:#183b5a; font:inherit; font-size:1.3rem;}
+.oligo-world-creation-label input::placeholder{color:#afc4d4;}
+.oligo-world-creation-fieldset{min-width:0; margin:0; padding:14px;
+  border:1px solid rgb(154 191 223 / 38%); border-radius:14px; background:#12304c;}
+.oligo-world-creation-fieldset legend{padding:0 6px; color:#aaf2ea;
+  font-size:1.2rem; font-weight:800;}
+.oligo-world-creation-fieldset p{margin:10px 0 0; color:#bdd5e4;
+  font-size:1.1rem; line-height:1.5;}
+.oligo-world-creation-regions{display:grid; grid-template-columns:70px minmax(0,1fr);
+  align-items:center; gap:9px;}
+.oligo-world-creation-regions label{color:#e5f2fa; font-size:1.2rem;}
+.oligo-world-creation-regions select:disabled{opacity:.65;}
+.oligo-world-style-grid{display:flex; flex-wrap:wrap; gap:8px;}
+.oligo-world-style-chip{padding:8px 12px; border:1px solid #759db3; border-radius:99px;
+  color:#e6f3fa; background:#1a3c59; font:inherit; font-size:1.2rem; cursor:pointer;}
+.oligo-world-style-chip:hover{border-color:#f2c78f;}
+.oligo-world-style-chip--active{border-color:#f2c78f; color:#193047;
+  background:#f2c78f; font-weight:800;}
+.oligo-world-creation-summary{display:grid; gap:4px; padding:12px 14px;
+  border:1px solid rgb(242 199 143 / 45%); border-radius:12px;
+  color:#d9e9f4; background:#173754; font-size:1.2rem;}
+.oligo-world-creation-summary strong{color:#f2c78f;}
+.oligo-world-save-status{margin:0; color:#bdd5e4; font-size:1.1rem;}
+.oligo-world-creation-error{margin:0; color:#ffd5ca; font-size:1.1rem;}
+.oligo-world-create-button{min-height:48px; border:1px solid #f2c78f; border-radius:12px;
+  color:#193047; background:#f2c78f; font:inherit; font-size:1.4rem; font-weight:800;
+  cursor:pointer;}
+.oligo-world-create-button:disabled{opacity:.5; cursor:not-allowed;}
+.oligo-world-create-button:not(:disabled):hover{background:#ffe0b2;}
+.oligo-world-carousel-controls button:focus-visible,.oligo-world-style-chip:focus-visible,
+.oligo-world-create-button:focus-visible,.oligo-world-creation-label input:focus-visible,
+.oligo-world-creation-regions select:focus-visible{outline:2px solid #fff; outline-offset:3px;}
+.oligo-world-progress-save{margin:12px 0 0; color:#bdd5e4; font-size:1.1rem;}
+.oligo-world-clear small{max-width:400px; color:#ffd5ca; font-size:1.2rem;}
+@media(max-width:500px){
+  .oligo-world-creation-layout{grid-template-columns:minmax(0,1fr); gap:14px;}
+  .oligo-world-creation-visual{padding:16px;}
+  .oligo-world-creation-visual .oligo-world-character-sprite{height:240px;}
+  .oligo-world-creation-form{gap:12px;}
+}

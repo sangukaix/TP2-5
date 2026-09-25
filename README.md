@@ -117,6 +117,7 @@ Codex 또는 팀원은 먼저 루트의 `AGENTS.md`와 아래 문서를 순서�
 - AI 전략기획 생성은 서버 백그라운드 작업으로 실행합니다. 화면을 다른 업무 페이지나 탭으로 바꿔도 작업 ID를 통해 상태를 이어서 확인하며, MySQL의 작업 상태와 완료된 기획안·Word/PPT를 다시 조회합니다.
 - 기존 `test-gangnam-dashboard/`는 별도의 Streamlit 프로토타입으로 유지합니다.
 - React 공개 경로는 `frontend/src/routes.js`에서 관리합니다. 주요 업무는 `/dashboard`, `/planning`, `/strategy`, `/saved-plans`이며 `/admin-login`에서 교육용 관리자 화면 잠금을 해제합니다. `/diagnosis`는 `/dashboard`, `/proposal`은 `/strategy`의 과거 주소 별칭입니다. 알 수 없는 경로는 404 안내를 표시합니다.
+- `/game`은 공개 GAME Hub, `/game/oligo-world`는 회원 계정에 진행을 저장하는 RPG, `/game/ladder`는 로그인 없이 2~8명이 바로 즐기는 독립 사다리게임입니다. My Page와 기획서 생성 중 링크는 Oligo World를 새 탭으로 엽니다. 사다리 결과는 서버나 브라우저 저장소에 저장하지 않습니다.
 
 ## 팀원 최초 설치
 
@@ -441,3 +442,15 @@ D-175: 자동 초기 목표를 고정 5%/20%에서 사업 유형·지역 전망�
 6. HTTPS URL에서 익명 Home·Dashboard·Planning·Strategy·Saved Plans, Signup, 중복 가입 차단, Login, Header, My Page 지역·프로필 수정·비밀번호 변경·Logout, 익명 `/my` 보호, 익명 BYOK 기획안 흐름을 확인합니다. 로그인 시도 제한과 세션 만료 행 정리 작업은 Production 공개 전에 운영 정책으로 추가 검토합니다.
 
 `.pem`은 팀장이 보유한 기존 파일로 EC2에 접속할 때만 사용하며 Git에 추가하거나 복사해 전달하지 않습니다. 회원 탈퇴는 본인 회원 행과 그 세션만 삭제합니다. 현재 저장 기획안은 회원 소유 구조로 바꾸지 않았습니다.
+
+### Oligo World 회원 게임 프로필 인계 (2026-09-25)
+
+Oligo World는 기존 `oligo_member_session` 쿠키로 로그인한 회원만 시작합니다. `/game`과 `/game/ladder`, 관광·기획·BYOK 화면은 공개 상태를 유지합니다. 회원당 `oligo_game_profiles` 행 하나를 `member_id` 기본키/FK로 연결합니다. `DRAFT`는 생성 중 자동 저장, `ACTIVE`는 캐릭터 생성 완료와 게임 진행을 뜻합니다. 닉네임은 공백 없는 한글·영문·숫자·밑줄 2~16자이며 랭킹의 식별 혼동을 줄이기 위해 ACTIVE 프로필끼리만 DB에서 고유하게 관리합니다. 미완성 DRAFT가 닉네임을 선점하지 않습니다. 게임 지역은 회원 지역을 처음 제안하지만 별도의 `region_code`로 저장합니다. 생성 후 캐릭터·닉네임·지역·여행 스타일 변경 기능은 아직 없습니다. 캐릭터·닉네임·지역 변경에는 향후 최소 Level(미정)과 5,000 W 비용을 적용할 예정입니다.
+
+1. MySQL 8.x에서 기존 `006_member_auth.sql` 적용 여부를 먼저 확인합니다. 같은 이름의 게임 테이블이 이미 있다면 실제 구조를 비교한 후 진행합니다.
+2. `mysql -h DB_HOST_VALUE -P DB_PORT_VALUE -u DB_USER_VALUE -p DB_NAME_VALUE < database/mysql/007_oligo_game_profile.sql`을 적용합니다. 이 SQL은 게임 프로필 테이블 하나를 `CREATE TABLE IF NOT EXISTS`로 추가하며 기존 관광·회원 데이터를 수정하거나 삭제하지 않습니다.
+3. 기존 Backend Python 환경으로 서비스 재시작 후 `GET /api/v1/game/profile`(익명 401)을 확인합니다. 로그인 후 프로필 없는 회원은 `{"profile":null}`, DRAFT는 설정 재개, ACTIVE는 저장된 Map/Tutorial로 진입합니다. `PATCH /api/v1/game/profile/draft`, `POST /api/v1/game/profile/finalize`, `PATCH /api/v1/game/profile/progress`, `POST /api/v1/game/tutorial/complete`는 기존 Origin 검사와 회원 세션을 사용합니다. `member_id`는 요청에서 받지 않습니다.
+4. `cd frontend && npm ci && npm run build` 후 기존 정적 배포 경로를 갱신합니다. HTTPS·`APP_ENV=production`·정확한 `APP_ORIGIN`·기존 DB/Auth 환경변수는 필수입니다. HTTP 탄력적 IP에서는 Secure 회원 쿠키가 유지되지 않습니다.
+5. 별도 시험 회원으로 DRAFT 저장→재접속 복원→캐릭터 확정→map001 Tutorial→EXP/W 각 10→map002→재접속 복원 및 다른 회원과의 격리를 확인합니다. `/game/ladder`의 익명 사용과 공개 관광 기능도 확인합니다. 실제 DB 접속이 불가능한 로컬 환경에서는 이 절차를 통과한 것으로 표시하지 않습니다.
+
+게임 진행 저장은 현재 map001/map002의 위치와 Tutorial 상태에 한정합니다. 보상은 서버에서 한 번만 지급하며 클라이언트의 EXP/W 입력을 받지 않습니다. 향후 랭킹·경쟁/점령 기능 전에 이동 검증과 서버 권위 규칙을 확장해야 합니다.
