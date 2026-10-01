@@ -234,6 +234,9 @@ class LLMRouter:
             if self.config['mode'] == 'local_only':
                 raise LLMProviderError('LOCAL_MODE_WEB_SEARCH_UNAVAILABLE', 'local_only 모드에서는 Web Search가 필요한 작업을 실행할 수 없습니다.', status_code=503)
             route.update({'provider': 'openai', 'fallback': 'none', 'locked_reason': 'Web Search 필수 작업'})
+        elif request.task == 'chat_revise':
+            # 웹 검색 OFF의 기획안 수정은 관리자 설정과 관계없이 로컬 Gemma만 사용합니다.
+            route.update({'provider': 'gemma', 'fallback': 'none', 'locked_reason': '웹 검색 OFF 수정: Gemma 고정'})
         elif self.config['mode'] == 'openai_only' or (request.task in REVIEW_TASKS and self.config['mode'] == 'hybrid'):
             route['provider'] = 'openai'
             route['fallback'] = 'none'

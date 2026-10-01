@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getAiRegionCatalog, getAiRegionDashboard } from '../api/dashboardApi'
 import { readStrategyJobLink } from '../features/planning/strategyJobLink'
+import { saveResumeRegionCode } from '../features/workspace/workspaceSession'
 
 /** AI 서버가 아직 시작되지 않은 첫 화면에도 사용할 최소 기본값입니다.
  * 실제 선택 목록은 useWorkspaceRegionData가 서버 카탈로그에서 자동으로 갱신합니다.
@@ -26,6 +27,12 @@ export function readWorkspaceRegion() {
 
 export function saveWorkspaceRegion(region) {
   try { window.localStorage.setItem(REGION_STORAGE_KEY, JSON.stringify(region)); return true }
+  catch { return false }
+}
+
+/** 새 작업은 이전 선택 지역만 비웁니다. 저장 기획서와 생성 기록은 삭제하지 않습니다. */
+export function clearWorkspaceRegion() {
+  try { window.localStorage.removeItem(REGION_STORAGE_KEY); return true }
   catch { return false }
 }
 
@@ -167,7 +174,22 @@ export function saveReport(regionCode, report) {
   }
   const previous = readSavedPlanIndex().filter((item) => item.entryId !== entryId)
   window.localStorage.setItem(SAVED_PLAN_INDEX_KEY, JSON.stringify([entry, ...previous]))
+  saveResumeRegionCode(regionCode)
   return storedReport
+}
+
+/** 새 기획안 저장이 끝난 뒤 교체된 이전 기획안만 브라우저 목록에서 제거합니다. */
+export function deleteSavedReport(entryId, regionCode) {
+  if (!entryId) return
+  try {
+    window.localStorage.removeItem(savedPlanReportKey(entryId))
+    const remaining = readSavedPlanIndex().filter((item) => item.entryId !== entryId)
+    window.localStorage.setItem(SAVED_PLAN_INDEX_KEY, JSON.stringify(remaining))
+    const latest = readSavedReport(regionCode)
+    if (latest?.__savedEntryId === entryId) window.localStorage.removeItem(reportStorageKey(regionCode))
+  } catch {
+    // 서버 저장본이 기준이므로 브라우저 저장 공간 정리 실패는 생성 완료를 되돌리지 않습니다.
+  }
 }
 
 /** 이전 버전에서 저장된 지역별 최신 기획서도 게시판에서 복구해 보여 줍니다. */

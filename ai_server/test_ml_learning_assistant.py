@@ -69,6 +69,7 @@ class MlLearningAssistantApiTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['generation_mode'], 'openai')
         self.assertEqual(response.json()['related_modules'], ['evaluation.py'])
+        self.catalog.assert_called_once_with('11680')
 
     def test_status_endpoint_marks_missing_key_inactive_without_openai_call(self) -> None:
         """키가 없으면 외부 호출 없이 즉시 빨간 Inactive 상태를 돌려줍니다."""

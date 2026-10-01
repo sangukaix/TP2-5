@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, BarChart3, Bot, FileText, MapPinned } from 'lucide-react'
+import { ArrowRight, BarChart3, Bot, FileText, History, MapPinned } from 'lucide-react'
 import HeaderActions from '../components/HeaderActions'
+import { beginNewWorkspaceSession, beginResumeWorkspaceSession, readResumeRegionCode } from '../features/workspace/workspaceSession'
+import { clearWorkspaceRegion } from './tourismWorkspace'
 import '../App.css'
 import nightLogo from '../assets/logo-night.png'
 import dayLogo from '../assets/logo-day.png'
@@ -87,7 +89,8 @@ export default function TourismHomePage() {
         <h1>지역 관광의 문제를 찾고<br /><em>실행 가능한 전략</em>으로<br className="home-mobile-break" /> 바꿉니다!</h1>
         <div className="home-hero-subtitle"><i /><p>관광데이터랩의 데이터를 분석하여<br className="home-mobile-break" /> AI가 기획서 초안을 작성해줍니다!</p><i /></div>
         <div className="home-hero-actions">
-          <a href="/dashboard">시작하기 <ArrowRight size={16} /></a>
+          <a className="home-hero-action--start" href="/dashboard" onClick={() => { beginNewWorkspaceSession(); clearWorkspaceRegion() }}>시작하기 <ArrowRight size={16} /></a>
+          <a className="home-hero-action--continue" href={`/saved-plans?resume=${encodeURIComponent(readResumeRegionCode())}`} onClick={() => beginResumeWorkspaceSession()}>이어서 하기 <History size={16} /></a>
         </div>
       </section>
 

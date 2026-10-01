@@ -1,8 +1,9 @@
-import { ChevronLeft, ChevronRight, Download, FileText, Presentation, RotateCcw, Search, X } from 'lucide-react'
+import { ArrowRight, ChevronLeft, ChevronRight, Download, FileText, Presentation, RotateCcw, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import WorkspaceShell from '../components/WorkspaceShell'
 import { downloadStoredStrategyDocument, getStoredStrategyReport, getStoredStrategyReports } from '../api/dashboardApi'
-import { downloadBlob } from './tourismWorkspace'
+import { downloadBlob, saveReport, saveWorkspaceRegion } from './tourismWorkspace'
+import { beginResumeWorkspaceSession } from '../features/workspace/workspaceSession'
 import '../App.css'
 
 const ROWS_PER_PAGE = 10
@@ -10,6 +11,12 @@ const ROWS_PER_PAGE = 10
 function formatSavedDate(value) {
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })
+}
+
+function restorePlan(plan, report) {
+  saveWorkspaceRegion({ code: plan.regionCode, name: plan.regionName })
+  saveReport(plan.regionCode, { ...report, __savedEntryId: plan.entryId })
+  beginResumeWorkspaceSession()
 }
 
 /** 참고 이미지처럼 단순한 표 중심으로 만든 저장 기획서 업무 게시판입니다. */
@@ -23,6 +30,7 @@ export default function SavedStrategyPlansBoardPage() {
   const [selectedReport, setSelectedReport] = useState(null)
   const [downloading, setDownloading] = useState('')
   const [error, setError] = useState('')
+  const [autoResumeRegionCode] = useState(() => new URLSearchParams(window.location.search).get('resume'))
   const strategy = selectedReport?.strategies?.[0]
 
   // 저장 목록은 브라우저별 임시 저장소가 아닌 팀 공용 MySQL에서 불러옵니다.
@@ -79,6 +87,34 @@ export default function SavedStrategyPlansBoardPage() {
     } catch (requestError) { setError(requestError.message) }
   }
 
+  const continuePlan = () => {
+    if (!selectedPlan || !selectedReport) return
+    try {
+      restorePlan(selectedPlan, selectedReport)
+    } catch {
+      setError('이 브라우저에 기획서를 임시 보관할 공간이 부족합니다. 다른 저장 데이터를 정리한 뒤 다시 시도해 주세요.')
+      return
+    }
+    window.location.assign('/strategy')
+  }
+
+  useEffect(() => {
+    if (!autoResumeRegionCode || !plans.length) return undefined
+    const plan = plans.find((item) => item.regionCode === autoResumeRegionCode)
+    let active = true
+    const request = plan
+      ? getStoredStrategyReport(plan.entryId)
+      : Promise.reject(new Error('이어서 진행할 저장 기획서를 찾지 못했습니다. 아래 목록에서 다른 기획서를 선택해 주세요.'))
+    request
+      .then((report) => {
+        if (!active) return
+        restorePlan(plan, report)
+        window.location.assign('/strategy')
+      })
+      .catch((requestError) => { if (active) setError(requestError.message) })
+    return () => { active = false }
+  }, [autoResumeRegionCode, plans])
+
   return (
     <WorkspaceShell>
       <main className="tourism-work-page saved-board-page">
@@ -101,7 +137,7 @@ export default function SavedStrategyPlansBoardPage() {
             <nav aria-label="페이지 이동"><button type="button" disabled={currentPage === 1} onClick={() => setPage(1)} aria-label="첫 페이지"><ChevronLeft size={14} /><ChevronLeft size={14} /></button><button type="button" disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))} aria-label="이전 페이지"><ChevronLeft size={15} /></button><b>{currentPage}</b>{currentPage < pageCount && <button type="button" onClick={() => setPage(currentPage + 1)}>{currentPage + 1}</button>}<button type="button" disabled={currentPage === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} aria-label="다음 페이지"><ChevronRight size={15} /></button><button type="button" disabled={currentPage === pageCount} onClick={() => setPage(pageCount)} aria-label="마지막 페이지"><ChevronRight size={14} /><ChevronRight size={14} /></button></nav>
           </div>
         </section>
-        {selectedPlan && selectedReport && strategy && <div className="saved-plan-modal-backdrop" role="presentation" onMouseDown={() => setSelectedPlan(null)}><section className="saved-plan-modal" role="dialog" aria-modal="true" aria-label="저장된 기획서" onMouseDown={(event) => event.stopPropagation()}><button className="saved-plan-modal-close" type="button" onClick={() => setSelectedPlan(null)} aria-label="닫기"><X size={18} /></button><header><p>{selectedPlan.regionName} 관광 전략 기획안</p><h2>{strategy.title}</h2><span>{formatSavedDate(selectedPlan.savedAt)} 생성</span></header><section className="saved-plan-modal-summary"><b>핵심 제안</b><p>{selectedReport.summary}</p></section><div className="saved-plan-modal-grid"><article><b>문제 / 제안</b><p>{strategy.problem_to_solve}</p></article><article><b>해결 방법</b><p>{strategy.solution}</p></article></div><section className="saved-plan-modal-steps"><b>5단계 실행 방법</b><ol>{strategy.implementation_steps?.map((step) => <li key={step.step}><i>{step.step}</i><span><small>{step.schedule}</small>{step.task}</span></li>)}</ol></section><footer><button type="button" onClick={() => download(selectedPlan, 'docx')} disabled={Boolean(downloading)}><Download size={15} />Word 다운로드</button><button type="button" onClick={() => download(selectedPlan, 'pptx')} disabled={Boolean(downloading)}><Presentation size={15} />PowerPoint 다운로드</button></footer></section></div>}
+        {selectedPlan && selectedReport && strategy && <div className="saved-plan-modal-backdrop" role="presentation" onMouseDown={() => setSelectedPlan(null)}><section className="saved-plan-modal" role="dialog" aria-modal="true" aria-label="저장된 기획서" onMouseDown={(event) => event.stopPropagation()}><button className="saved-plan-modal-close" type="button" onClick={() => setSelectedPlan(null)} aria-label="닫기"><X size={18} /></button><header><p>{selectedPlan.regionName} 관광 전략 기획안</p><h2>{strategy.title}</h2><span>{formatSavedDate(selectedPlan.savedAt)} 생성</span></header><section className="saved-plan-modal-summary"><b>핵심 제안</b><p>{selectedReport.summary}</p></section><div className="saved-plan-modal-grid"><article><b>문제 / 제안</b><p>{strategy.problem_to_solve}</p></article><article><b>해결 방법</b><p>{strategy.solution}</p></article></div><section className="saved-plan-modal-steps"><b>5단계 실행 방법</b><ol>{strategy.implementation_steps?.map((step) => <li key={step.step}><i>{step.step}</i><span><small>{step.schedule}</small>{step.task}</span></li>)}</ol></section><footer><button type="button" onClick={() => download(selectedPlan, 'docx')} disabled={Boolean(downloading)}><Download size={15} />Word 다운로드</button><button type="button" onClick={() => download(selectedPlan, 'pptx')} disabled={Boolean(downloading)}><Presentation size={15} />PowerPoint 다운로드</button><button type="button" className="saved-plan-continue" onClick={continuePlan}><ArrowRight size={15} />이어서 편집</button></footer></section></div>}
       </main>
     </WorkspaceShell>
   )

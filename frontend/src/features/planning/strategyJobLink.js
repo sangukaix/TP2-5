@@ -4,6 +4,7 @@ import { jobStartTime } from './strategyJobClock.js'
 export function strategyJobUrl(job, regionName) {
   const query = new URLSearchParams({ job_id: job.job_id, region_code: job.region_code, region_name: regionName })
   if (jobStartTime(job.started_at)) query.set('started_at', job.started_at)
+  if (/^[\w-]{1,64}$/.test(job.replace_report_id || '')) query.set('replace_report_id', job.replace_report_id)
   return `/strategy?${query}`
 }
 
@@ -15,11 +16,13 @@ export function readStrategyJobLink(location = window.location) {
   const region_name = query.get('region_name')
   if (!/^[\w-]{1,100}$/.test(job_id || '') || !/^\d{5}$/.test(region_code || '') || !region_name?.trim()) return null
   const started_at = query.get('started_at')
-  return { job_id, region_code, region_name, ...(jobStartTime(started_at) ? { started_at } : {}) }
+  const replace_report_id = query.get('replace_report_id')
+  return { job_id, region_code, region_name, ...(jobStartTime(started_at) ? { started_at } : {}),
+    ...(/^[\w-]{1,64}$/.test(replace_report_id || '') ? { replace_report_id } : {}) }
 }
 
 export function clearStrategyJobLink() {
   const url = new URL(window.location.href)
-  for (const key of ['job_id', 'region_code', 'region_name', 'started_at']) url.searchParams.delete(key)
+  for (const key of ['job_id', 'region_code', 'region_name', 'started_at', 'replace_report_id']) url.searchParams.delete(key)
   window.history.replaceState(window.history.state, '', url)
 }

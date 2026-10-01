@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from datetime import date
+from types import SimpleNamespace
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
@@ -12,7 +13,7 @@ from sklearn.linear_model import LinearRegression
 from ai_server.ml.evaluation import TEST_MONTHS, VALIDATION_MONTHS, select_and_evaluate
 from ai_server.ml.horizon_policy import resolve_planning_horizon
 from ai_server.ml.planning_evidence import build_planning_ml_evidence
-from ai_server.ml.learning_catalog import build_ml_learning_catalog
+from ai_server.ml.learning_catalog import build_ml_learning_catalog, list_ml_learning_region_options
 from ai_server.ml.validation import data_fingerprint, validate_monthly_data
 
 
@@ -134,6 +135,29 @@ class MlValidationTest(unittest.TestCase):
             },
         )
         self.assertTrue(all(len(module.forecast) == 3 for module in gangnam.modules))
+
+    def test_learning_page_reads_only_the_selected_region(self) -> None:
+        """목록 조회는 예측하지 않고, 상세 조회는 선택 지역에만 예측을 요청합니다."""
+        selected = SimpleNamespace(
+            region_code='11111', region_name='선택 지역',
+            load_history=Mock(return_value=pd.DataFrame()),
+            predict=Mock(return_value={'model': {'target': {}}, 'forecasts': []}),
+        )
+        other = SimpleNamespace(
+            region_code='22222', region_name='다른 지역',
+            load_history=Mock(), predict=Mock(),
+        )
+        with patch('ai_server.ml.learning_catalog.list_region_pipelines', return_value=(selected, other)):
+            options = list_ml_learning_region_options()
+            self.assertEqual([item.region_code for item in options.regions], ['11111', '22222'])
+            selected.predict.assert_not_called()
+            other.predict.assert_not_called()
+
+            catalog = build_ml_learning_catalog('11111')
+            self.assertEqual([item.region_code for item in catalog.regions], ['11111'])
+            selected.predict.assert_called_once_with(3)
+            other.load_history.assert_not_called()
+            other.predict.assert_not_called()
 
 
 if __name__ == '__main__':

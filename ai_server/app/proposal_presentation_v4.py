@@ -29,7 +29,7 @@ from .report_review_status import review_label
 PRESENTATION_TEMPLATE_PATH = (
     Path(__file__).resolve().parent / "templates" / "tourism_strategy_12_slide_template_v6.pptx"
 )
-PRESENTATION_RENDER_VERSION = "pptx-v73-matched-selected-case-photo"
+PRESENTATION_RENDER_VERSION = "pptx-v74-ai-visual-edits"
 FINAL_SLIDE_COUNT = 12
 
 BLUE = RGBColor(0x00, 0x4E, 0xA2)
@@ -883,6 +883,8 @@ def create_strategy_proposal_presentation(report: dict[str, Any]) -> BytesIO:
     insert_business_overview(prs, report)
     from .proposal_final_polish import final_polish
     final_polish(prs)
+    from .proposal_ai_edits import apply_presentation_edits
+    apply_presentation_edits(prs, report)
     from hashlib import sha256
     photo_hashes: dict[bytes, list[str]] = {}
     for slide_index, slide in enumerate(prs.slides, start=1):

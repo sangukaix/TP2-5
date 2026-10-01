@@ -61,10 +61,33 @@ ASSISTANT_CHAT_SCHEMA: dict[str, Any] = {
                                 'required': ['step', 'schedule', 'task', 'deliverable'],
                             },
                         },
+                        'presentation_edits': {
+                            'type': 'array',
+                            'maxItems': 20,
+                            'items': {
+                                'type': 'object',
+                                'additionalProperties': False,
+                                'properties': {
+                                    'slide_number': {'type': 'integer', 'minimum': 1, 'maximum': 40},
+                                    'target_text': {'type': 'string', 'maxLength': 200},
+                                    'operation': {'type': 'string', 'enum': ['append', 'prepend', 'replace', 'style']},
+                                    'text': {'type': 'string', 'maxLength': 80},
+                                    'text_color': {'type': ['string', 'null'], 'pattern': '^#?[0-9A-Fa-f]{6}$'},
+                                    'font_size_pt': {'type': ['number', 'null'], 'minimum': 8, 'maximum': 72},
+                                    'font_family': {'type': ['string', 'null'], 'maxLength': 80},
+                                    'bold': {'type': ['boolean', 'null']},
+                                    'alignment': {'type': ['string', 'null'], 'enum': ['left', 'center', 'right', None]},
+                                },
+                                'required': [
+                                    'slide_number', 'target_text', 'operation', 'text', 'text_color',
+                                    'font_size_pt', 'font_family', 'bold', 'alignment',
+                                ],
+                            },
+                        },
                     },
                     'required': [
                         'summary', 'strategy_title', 'problem_to_solve', 'comparison_analysis',
-                        'solution', 'expected_effect', 'implementation_steps',
+                        'solution', 'expected_effect', 'implementation_steps', 'presentation_edits',
                     ],
                 },
             ],
@@ -82,17 +105,23 @@ current_report는 현재 화면에서 검토 중인 기획안으로만 사용한
 입력에 없는 관광지·업체·예산·방문자·매출·성과 수치는 만들지 않는다.
 
 질문이 지표 설명이면 explain, 다른 지역 공식 사례나 최신 정책 조사가 필요하면 research,
-현재 기획안의 방향·문장·실행 단계를 바꾸는 요청이면 revise를 선택한다.
+현재 기획안의 방향·문장·실행 단계 또는 슬라이드 디자인·글자·색상·폰트·정렬·이모티콘을 바꾸는 요청이면 revise를 선택한다.
 웹 검색을 사용할 때는 허용된 정부·지자체·공공기관 공식 도메인만 사용하고 source URL을 반환한다.
 행사와 지표 상승이 같은 시기에 관측됐다는 이유만으로 인과관계라고 단정하지 않는다.
 
 answer는 4문장 이내, key_points는 회의에서 바로 읽을 수 있는 짧은 문장으로 작성한다.
 revise일 때만 report_patch를 만들고, current_report에서 바꿀 필요가 없는 필드는 기존 문구를 그대로 복사한다.
 implementation_steps는 실제 행동·기간·확인 가능한 결과물을 포함한 3~5단계로 작성한다.
+슬라이드 시각 수정은 report_patch.presentation_edits에 구조화한다. 각 항목은 1부터 시작하는 slide_number,
+해당 슬라이드에 실제로 보이는 기존 target_text, append/prepend/replace/style operation을 사용한다.
+append/prepend/replace의 text에는 새로 넣을 짧은 문구나 이모티콘만 넣고, style은 text를 빈 문자열로 둔다.
+색상은 #RRGGBB, 글자 크기는 pt 단위다. 요청하지 않은 시각 속성은 null로 둔다.
+기존 presentation_edits가 있으면 유지하고 새 요청을 추가하거나 같은 대상을 최신 요청으로 교체한다.
+시각 수정만 요청받았으면 보고서 본문 필드는 current_report와 동일하게 복사하고 디자인 수정이 범위 밖이라고 거절하지 않는다.
 사용자 확인 없이 저장하거나 확정했다고 말하지 않는다. explain 또는 research면 report_patch는 null이다.
 web_search_allowed=false이면 새 웹 검색을 했다고 말하지 않는다. 전달된 보고서·지역 자료에 있는 근거만 설명한다.
 현재 보고서에 첨부 원문이나 사례 세부사항이 없으면 기억으로 복원하지 말고 필요한 원문을 요청한다.
-수정은 본문·제목·실행 단계에 한정한다. ML 수치, 목표 KPI, 예산, 일정 조건을 저장까지 변경했다고 주장하지 않는다.
+수정은 본문·제목·실행 단계와 presentation_edits로 표현 가능한 PPT 시각 요소를 포함한다. ML 수치, 목표 KPI, 예산, 일정 조건을 저장까지 변경했다고 주장하지 않는다.
 reference_only_not_read는 이번 수정에 원문을 전달하지 않은 참고목록이다. 이 목록의 내용을 추측·인용하지 않는다.
 새 사업 후보 선정이나 새 사례 검증이 필요하면 기존 본문 보완 범위를 벗어나므로 새 기획안 생성 또는 원문 확인이 필요하다고 안내한다.
 이동통신·카드 기반 방문·소비 지표는 해당 표본·집계 정의의 관측 지표다. 지표가 방문·소비를 전혀 뜻하지 않는다고 부정하지 말고, 전수조사·정책 인과효과와 다름을 설명한다.
@@ -151,7 +180,10 @@ class TourismChatAssistantAgent:
         lowered_question = question.lower()
         # 웹 검색은 지역명과 이번 질문만 외부 조사 경로로 보낸다. 보고서 원문,
         # 사업 여건, 과거 대화는 보내지 않고 실제 수정은 로컬 경로에서만 처리한다.
-        revise = any(word in lowered_question for word in ('수정', '고쳐', '바꿔', '추가', '구체적', '다듬', '보완'))
+        revise = any(word in lowered_question for word in (
+            '수정', '고쳐', '바꿔', '추가', '구체적', '다듬', '보완', '디자인', '슬라이드',
+            '표지', '이모티콘', '폰트', '글씨', '색상', '색깔', '정렬', '레이아웃',
+        ))
         use_search = enable_web_search
         task = 'chat_research' if use_search else ('chat_revise' if revise else 'chat_explain')
         if not use_search:

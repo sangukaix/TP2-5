@@ -116,6 +116,24 @@ class MlLearningCatalog(BaseModel):
     regions: list[MlLearningRegion]
 
 
+class MlLearningRegionOption(BaseModel):
+    """초기 화면에 필요한 가벼운 지역 선택 항목입니다."""
+    region_code: str
+    region_name: str
+
+
+class MlLearningRegionOptions(BaseModel):
+    regions: list[MlLearningRegionOption]
+
+
+def list_ml_learning_region_options() -> MlLearningRegionOptions:
+    """모델 파일을 읽거나 예측하지 않고 등록 지역 이름만 반환합니다."""
+    return MlLearningRegionOptions(regions=[
+        MlLearningRegionOption(region_code=pipeline.region_code, region_name=pipeline.region_name)
+        for pipeline in list_region_pipelines()
+    ])
+
+
 def _format_result(value: float, unit: str) -> str:
     """카드 결론에 들어가는 숫자를 단위에 맞게 짧게 표시합니다."""
     if unit == '원':
@@ -213,10 +231,13 @@ def _build_module(
     )
 
 
-def build_ml_learning_catalog() -> MlLearningCatalog:
-    """등록표를 순회하므로 지역·target 추가 시 화면 코드를 수정하지 않아도 됩니다."""
+def build_ml_learning_catalog(region_code: str | None = None) -> MlLearningCatalog:
+    """지역을 지정하면 해당 지역만 읽고 예측합니다. 전체 조회는 호환용입니다."""
     regions = []
-    for pipeline in list_region_pipelines():
+    pipelines = list_region_pipelines()
+    if region_code is not None:
+        pipelines = tuple(pipeline for pipeline in pipelines if pipeline.region_code == region_code)
+    for pipeline in pipelines:
         try:
             if pipeline.load_history is None:
                 raise ValueError('학습 이력 함수가 등록되지 않았습니다.')

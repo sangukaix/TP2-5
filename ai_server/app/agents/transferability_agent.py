@@ -189,11 +189,17 @@ class TransferabilityAgent:
                 '예산 편성 사례는 비용 참고자료이지 관광사업 후보가 아닙니다. '
                 'source_id는 제공 목록에서 그대로 복사하세요. 해결할 근거가 없으면 needs_evidence로 표시하세요.'
                 if revision_feedback else ''
+            ) + (
+                '\nregeneration_request.reason이 candidate_change이면 사용자가 확인한 '
+                'requested_candidate_id와 requested_candidate_title의 후보를 선택안으로 유지한다. '
+                '그 후보의 근거가 현재 공식 자료에서 더는 검증되지 않으면 다른 후보를 조용히 선택하지 말고 needs_evidence로 표시한다.'
+                if (evidence_pack.get('regeneration_request') or {}).get('reason') == 'candidate_change' else ''
             ),
             input_payload={
                 'region_code': evidence_pack.get('region_code'), 'region_name': evidence_pack.get('region_name'),
                 'period': evidence_pack.get('period'), 'snapshot': evidence_pack.get('snapshot'),
                 'planning_brief': evidence_pack.get('planning_brief'), 'benchmark_cases': cases,
+                'regeneration_request': evidence_pack.get('regeneration_request'),
                 # 검증된 지역 시설·공식 정책도 봐야 타 지역 사례를 그대로 복사하지 않습니다.
                 'sources': evidence_pack.get('sources') or [],
                 'research_gaps': evidence_pack.get('research_gaps') or [],

@@ -10,6 +10,7 @@ import { BUSINESS_DIRECTIONS, RESOURCE_OPTIONS, CONTEXT_OPTIONS, simplifiedDraft
 import { readActiveStrategyJob, saveActiveStrategyJob, useWorkspaceRegionData } from './tourismWorkspace'
 import { getStrategyGenerationReadiness, startAiStrategyReportJob } from '../api/dashboardApi'
 import { strategyJobUrl } from '../features/planning/strategyJobLink'
+import { beginResumeWorkspaceSession, isNewWorkspaceSession } from '../features/workspace/workspaceSession'
 import '../App.css'
 import '../features/planning/planning.css'
 
@@ -68,10 +69,10 @@ function ByokKeyModal({ connection, onClose }) {
   </div>, document.body)
 }
 
-function PlanningForm({ region, regions, dataState, byokConnection, onRegionChange, onDirtyChange }) {
+function PlanningForm({ region, regions, dataState, byokConnection, freshSession, onRegionChange, onDirtyChange }) {
   // 입력 초안은 지역 코드별 localStorage에서 복원합니다.
   // 단, 첨부 문서 본문은 브라우저에 저장하지 않고 생성 요청 시에만 사용합니다.
-  const [brief, setBrief] = useState(() => simplifiedDraft(region.code))
+  const [brief, setBrief] = useState(() => simplifiedDraft(region.code, { restorePrevious: !freshSession }))
   useEffect(() => {
     const refresh = () => setBrief((current) => {
       const schedule = nextThreeMonthSchedule()
@@ -94,7 +95,7 @@ function PlanningForm({ region, regions, dataState, byokConnection, onRegionChan
     window.addEventListener('beforeunload', guard)
     return () => window.removeEventListener('beforeunload', guard)
   }, [dirty, onDirtyChange])
-  const activeJob = readActiveStrategyJob(region.code)
+  const activeJob = freshSession ? null : readActiveStrategyJob(region.code)
   // 생성만 보호하고, 대시보드·저장 기획안 조회에는 영향을 주지 않는 서버 최신성 계약입니다.
   useEffect(() => {
     let active = true
@@ -141,12 +142,13 @@ function PlanningForm({ region, regions, dataState, byokConnection, onRegionChan
     if (submitting.current || !persistPlanningDraft()) return
     submitting.current = true; setBusy(true)
     try {
-      if (activeJob) { window.location.assign(strategyJobUrl(activeJob, region.name)); return }
+      if (activeJob) { beginResumeWorkspaceSession(); window.location.assign(strategyJobUrl(activeJob, region.name)); return }
       // 입력한 조건의 복사본이 서버 작업에 전달됩니다. 작성 중 초안은 별도입니다.
       const started_at = new Date().toISOString()
       const job = { ...await startAiStrategyReportJob(region.code, { region_name: region.name, planning_brief: { ...brief, ...nextThreeMonthSchedule() } }), started_at }
       // 작업 ID만 브라우저에 남기고, 첨부 문서 본문은 서버 작업 중에만 사용합니다.
       saveActiveStrategyJob(job)
+      beginResumeWorkspaceSession()
       window.location.assign(strategyJobUrl(job, region.name))
     } catch (requestError) { setError(requestError.message); submitting.current = false; setBusy(false) }
   }
@@ -189,6 +191,7 @@ function PlanningForm({ region, regions, dataState, byokConnection, onRegionChan
 
 export default function TourismPlanningPage() {
   const { region, regions, chooseRegion, state } = useWorkspaceRegionData()
+  const [freshSession] = useState(isNewWorkspaceSession)
   const [dirty, setDirty] = useState(false)
   const byokConnection = useByokConnection()
   // 다른 지역으로 바꾸기 전, 아직 저장하지 않은 사업 여건이 있으면 한 번 확인합니다.
@@ -204,6 +207,7 @@ export default function TourismPlanningPage() {
         region={region}
         regions={regions}
         dataState={state}
+        freshSession={freshSession}
         byokConnection={byokConnection}
         onRegionChange={changeRegion}
         onDirtyChange={setDirty}

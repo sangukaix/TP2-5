@@ -4,15 +4,17 @@ import WorkspaceAssistantPanel from '../components/WorkspaceAssistantPanel'
 import WorkspaceShell from '../components/WorkspaceShell'
 import { WorkspaceConversationProvider } from '../components/WorkspaceConversationProvider'
 import StrategyPresentationPreview from '../components/StrategyPresentationPreview'
-import { cancelAiStrategyReportJob, downloadAiStrategyPresentation, downloadAiStrategyProposal, getAiStrategyReportJob, getStoredStrategyReport, getStoredStrategyReports, saveStoredStrategyReport } from '../api/dashboardApi'
-import { clearActiveStrategyJob, downloadBlob, readActiveStrategyJob, readSavedReport, saveReport, useWorkspaceRegionData } from './tourismWorkspace'
+import { cancelAiStrategyReportJob, downloadAiStrategyPresentation, downloadAiStrategyProposal, getAiStrategyReportJob, getStoredStrategyReport, getStoredStrategyReports, saveStoredStrategyReport, startAiStrategyReportJob } from '../api/dashboardApi'
+import { clearActiveStrategyJob, deleteSavedReport, downloadBlob, readActiveStrategyJob, readSavedReport, saveActiveStrategyJob, saveReport, useWorkspaceRegionData } from './tourismWorkspace'
 import { readPlanningDraft } from '../features/planning/planningBrief'
 import { applyReportPatch } from '../features/planning/applyReportPatch'
-import { clearStrategyJobLink, readStrategyJobLink } from '../features/planning/strategyJobLink'
+import { clearStrategyJobLink, readStrategyJobLink, strategyJobUrl } from '../features/planning/strategyJobLink'
+import { buildReportRegenerationPayload } from '../features/planning/reportRegeneration'
 import StrategyJobWaitingNotice from '../features/planning/StrategyJobWaitingNotice'
 import '../features/planning/planning.css'
 import '../App.css'
 import { createReportSaveQueue } from '../features/planning/reportSaveQueue'
+import { isNewWorkspaceSession } from '../features/workspace/workspaceSession'
 
 const queueReportSave = createReportSaveQueue(saveStoredStrategyReport)
 
@@ -28,10 +30,12 @@ function reportFingerprint(value) {
 export default function TourismStrategyPage() {
   // 선택 지역과 해당 지역의 마지막 생성 작업을 여러 페이지에서 이어서 사용합니다.
   const { region } = useWorkspaceRegionData()
+  const [freshSession] = useState(isNewWorkspaceSession)
   const [report, setReport] = useState(null)
-  const [activeJob, setActiveJob] = useState(readStrategyJobLink)
+  const [activeJob, setActiveJob] = useState(() => freshSession ? null : readStrategyJobLink())
   const [jobProgress, setJobProgress] = useState(null)
   const [cancellingJob, setCancellingJob] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
   const [downloadingFormat, setDownloadingFormat] = useState('')
   const [error, setError] = useState('')
   const [saveStatus, setSaveStatus] = useState({ state: 'idle' })
@@ -42,9 +46,9 @@ export default function TourismStrategyPage() {
   const editHistory = useRef([])
   const [historyDepth, setHistoryDepth] = useState(0)
   const [isModified, setIsModified] = useState(false)
-  const persistedJob = readActiveStrategyJob(region.code)
+  const persistedJob = freshSession ? null : readActiveStrategyJob(region.code)
   const currentJob = activeJob?.region_code === region.code ? activeJob : persistedJob
-  const persistedReport = useMemo(() => readSavedReport(region.code), [region.code])
+  const persistedReport = useMemo(() => freshSession ? null : readSavedReport(region.code), [freshSession, region.code])
   const storedReport = report?.region_name === region.name ? report : persistedReport
   const displayReport = currentJob ? null : storedReport
   const strategy = displayReport?.strategies?.[0]
@@ -73,7 +77,7 @@ export default function TourismStrategyPage() {
 
   // 브라우저 캐시가 비어도 MySQL 게시판의 해당 지역 최신 생성본을 다시 불러옵니다.
   useEffect(() => {
-    if (currentJob || storedReport) return undefined
+    if (freshSession || currentJob || storedReport) return undefined
     let active = true
     getStoredStrategyReports()
       .then((items) => items.find((item) => item.regionCode === region.code))
@@ -86,7 +90,7 @@ export default function TourismStrategyPage() {
       })
       .catch(() => { /* 저장본이 없거나 DB가 잠시 지연되면 새 기획안 안내를 그대로 표시합니다. */ })
     return () => { active = false }
-  }, [currentJob, region.code, storedReport])
+  }, [currentJob, freshSession, region.code, storedReport])
   useEffect(() => {
     if (!needsPreparation) return undefined
     let active = true
@@ -113,6 +117,9 @@ export default function TourismStrategyPage() {
           const completed = { ...job.report, __savedEntryId: job.job_id }
           try {
             setReport(saveReport(region.code, completed))
+            if (currentJob.replace_report_id && job.persistence_status === 'saved' && completed.generation_mode !== 'offline_sample') {
+              deleteSavedReport(currentJob.replace_report_id, region.code)
+            }
           } catch {
             // 브라우저 저장공간이 부족해도 서버가 만든 본문은 현재 화면에서 확인할 수 있다.
             setReport(completed)
@@ -166,7 +173,7 @@ export default function TourismStrategyPage() {
       document.removeEventListener('visibilitychange', resume)
       window.removeEventListener('focus', resume)
     }
-  }, [currentJob?.job_id, region.code])
+  }, [currentJob?.job_id, currentJob?.replace_report_id, region.code])
 
   const cancelGeneration = async () => {
     if (!currentJob?.job_id || cancellingJob || !canCancelJob) return
@@ -186,6 +193,31 @@ export default function TourismStrategyPage() {
     } catch (requestError) {
       setCancellingJob(false)
       setError(requestError.message || '취소 요청에 실패했습니다. 다시 시도해주세요.')
+    }
+  }
+
+  const regenerateReport = async (proposal) => {
+    if (!displayReport || currentJob || regenerating) return
+    setRegenerating(true)
+    setError('')
+    try {
+      const payload = buildReportRegenerationPayload(region, proposal, planningBrief)
+      const startedAt = new Date().toISOString()
+      const response = await startAiStrategyReportJob(region.code, payload)
+      const job = {
+        ...response,
+        planning_brief: payload.planning_brief,
+        started_at: startedAt,
+        replace_report_id: proposal.source_report_id,
+      }
+      saveActiveStrategyJob(job)
+      window.history.replaceState(window.history.state, '', strategyJobUrl(job, region.name))
+      setJobProgress({ jobId: job.job_id, status: job.status, step: job.progress_step, message: job.message || '' })
+      setActiveJob(job)
+    } catch (requestError) {
+      setError(requestError.message || '새 기획안 생성 요청에 실패했습니다.')
+    } finally {
+      setRegenerating(false)
     }
   }
 
@@ -266,9 +298,9 @@ export default function TourismStrategyPage() {
           {displayReport?.generation_mode === 'offline_sample' && <p className="work-error">오프라인 테스트 결과입니다. 입력 여건에 맞춘 AI 조사·기획은 실행되지 않았습니다.</p>}
           {!displayReport && !loading && <section className="strategy-start"><span><Sparkles size={21} /></span><h3>지역에 필요한 사업을 AI가 제안합니다.</h3><p>예산·일정·실행 여건을 확인한 뒤, 지역 데이터와 공식 사례를 조사해 기획안을 만듭니다. 모르는 조건은 미정으로 시작할 수 있습니다.</p></section>}
           {loading && <section className="strategy-start strategy-start--loading"><span className="strategy-job-loader" aria-hidden="true"><i /><i /><LoaderCircle size={22} /></span><h3>기획서 초안을 생성 중입니다</h3><StrategyJobWaitingNotice key={currentJob.job_id} jobId={currentJob.job_id} startedAt={currentJob.started_at || (persistedJob?.job_id === currentJob.job_id ? persistedJob.started_at : undefined)} /><p role="status" aria-live="polite">{jobMessage}</p><div className="strategy-job-flow" aria-label="기획서 생성 진행 단계">{['데이터 분석', '공식사례 확인', '기획안 생성', '품질검토'].map((label, index) => <div className="strategy-job-stage" key={label}><span className={Number.isInteger(progressStep) && index < progressStep ? 'is-complete' : index === progressStep ? 'is-current' : ''} aria-current={index === progressStep ? 'step' : undefined}>{Number.isInteger(progressStep) && index < progressStep && <CheckCircle2 size={12} aria-hidden="true" />}{label}<b className="strategy-job-sr">{Number.isInteger(progressStep) && index < progressStep ? ' 완료' : index === progressStep ? ' 진행 중' : ' 대기'}</b></span>{index < 3 && <i className={Number.isInteger(progressStep) && index < progressStep ? 'is-complete' : ''} aria-hidden="true" />}</div>)}</div>{canCancelJob && <button type="button" className="strategy-job-cancel" onClick={cancelGeneration} disabled={cancellingJob || jobStatus === 'cancelling'} aria-busy={cancellingJob}>{cancellingJob || jobStatus === 'cancelling' ? '취소 중...' : '기획서 생성 취소'}</button>}<small>다른 탭이나 페이지로 이동해도 생성은 계속됩니다. 돌아오면 진행 상태를 다시 확인합니다.</small></section>}
-          {displayReport && strategy && <StrategyPresentationPreview region={region} report={displayReport} planningBrief={planningBrief} onApplyPatch={applyPatch} onDownload={downloadPlan} downloadingFormat={downloadingFormat} onReset={resetEdits} onUndo={undoEdit} canReset={isModified} canUndo={historyDepth > 0} editing={saveStatus.state === 'saving'} />}
+          {displayReport && strategy && <StrategyPresentationPreview region={region} report={displayReport} planningBrief={planningBrief} onApplyPatch={applyPatch} onRegenerate={regenerateReport} regenerating={regenerating} onDownload={downloadPlan} downloadingFormat={downloadingFormat} onReset={resetEdits} onUndo={undoEdit} canReset={isModified} canUndo={historyDepth > 0} editing={saveStatus.state === 'saving'} />}
         </section>
-        <WorkspaceAssistantPanel key={`${region.code}-${displayReport?.__savedEntryId || 'draft'}`} planningBrief={planningBrief} region={region} report={displayReport} onApplyPatch={applyPatch} applying={saveStatus.state === 'saving'} />
+        <WorkspaceAssistantPanel key={`${region.code}-${displayReport?.__savedEntryId || 'draft'}`} planningBrief={planningBrief} region={region} report={displayReport} onApplyPatch={applyPatch} onRegenerate={regenerateReport} applying={saveStatus.state === 'saving'} regenerating={regenerating} />
       </div></WorkspaceConversationProvider>
     </main>
   </WorkspaceShell>

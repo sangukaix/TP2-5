@@ -1,5 +1,5 @@
-.ml-test-page {width: min(1430px,calc(100% - 12px)); margin: 0 auto 0 0; padding: 30px 0 50px; color: #172033}
-.ml-test-layout {display: grid; grid-template-columns: minmax(0,1fr) 318px; align-items: start; gap: 18px}
+.ml-test-page {width: min(1600px,calc(100% - 24px)); margin: 0 auto; padding: 30px 0 50px; color: #172033}
+.ml-test-layout {display: grid; grid-template-columns: minmax(0,1fr) 320px; align-items: start; gap: 20px}
 .ml-test-content {min-width: 0}
 .ml-test-hero {display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
   padding: 24px 26px; border: 1px solid #dbe4ec; border-radius: 12px; background: #fff}
@@ -22,16 +22,6 @@
 .ml-overview b {display: block; overflow: hidden; margin: 6px 0 5px; color: #263852; font-size: 1.3rem;
   text-overflow: ellipsis; white-space: nowrap}
 .ml-overview span {overflow: hidden; text-overflow: ellipsis; white-space: nowrap}
-.ml-pipeline {margin-top: 18px; padding: 19px 22px; border: 1px solid #dbe4ec; border-radius: 10px;
-  background: #fff}
-.ml-pipeline h2 {margin: 0 0 15px; font-size: 1.4rem}
-.ml-pipeline ol {display: grid; grid-template-columns: repeat(7,1fr); gap: 7px; margin: 0; padding: 0;
-  list-style: none}
-.ml-pipeline li {position: relative; display: grid; place-items: center; gap: 7px; min-height: 70px; padding: 9px;
-  border-radius: 8px; color: #506077; background: #f4f7fa; text-align: center; font-size: 1rem}
-.ml-pipeline li:not(:last-child)::after {position: absolute; z-index: 2; right: -7px; color: #94a3b8; content: '›'}
-.ml-pipeline i {display: grid; width: 22px; height: 22px; place-items: center; border-radius: 50%; color: #fff;
-  background: #4778cf; font-size: 1rem; font-style: normal; font-weight: 800}
 .ml-module-list {display: grid; gap: 20px; margin-top: 20px}
 .ml-module-card {padding: 24px; border: 1px solid #d7e1ea; border-radius: 12px; background: #fff;
   box-shadow: 0 7px 18px rgb(15 23 42 / 4%)}
@@ -47,15 +37,12 @@
 .ml-module-main {display: grid; grid-template-columns: minmax(290px,.85fr) minmax(420px,1.15fr); gap: 18px}
 .ml-module-notes {display: grid; gap: 10px}
 .ml-module-notes section {padding: 14px 15px; border: 1px solid #e3e9ef; border-radius: 9px; background: #fbfcfd}
-.ml-module-notes h3, .ml-module-detail-grid h3 {display: flex; align-items: center; gap: 6px; margin: 0 0 9px;
+.ml-module-notes h3, .ml-module-evaluation h3 {display: flex; align-items: center; gap: 6px; margin: 0 0 9px;
   color: #354a64; font-size: 1.1rem}
 .ml-module-notes ul {display: grid; gap: 5px; margin: 0; padding-left: 17px; color: #617087; font-size: 1rem}
 .ml-module-notes small {display: block; margin-top: 8px; color: #8a97a8; font-size: .9rem}
 .ml-module-notes strong {color: #315c9d; font-size: 1.2rem}
 .ml-module-notes p {margin: 6px 0 0; color: #69788c; font-size: 1rem; line-height: 1.55}
-.ml-feature-list {display: flex; flex-wrap: wrap; gap: 5px}
-.ml-feature-list code {padding: 4px 6px; border-radius: 5px; color: #475569; background: #eef2f6;
-  font-family: inherit; font-size: .9rem}
 .ml-module-chart {min-width: 0; padding: 15px; border: 1px solid #e1e8ef; border-radius: 9px}
 .ml-module-chart>div {display: flex; justify-content: space-between; gap: 12px; margin-bottom: 3px}
 .ml-module-chart b {color: #334b68; font-size: 1.2rem}
@@ -63,20 +50,14 @@
 .ml-test-tooltip {display: grid; gap: 4px; padding: 9px 11px; border: 1px solid #d9e2eb; border-radius: 7px;
   background: #fff; box-shadow: 0 7px 18px #0f172a14; font-size: 1rem}
 .ml-test-tooltip b {margin-bottom: 2px; color: #334155}
-.ml-module-detail-grid {display: grid; grid-template-columns: 1.4fr .8fr 1fr; gap: 12px; margin-top: 17px}
-.ml-module-detail-grid>section {min-width: 0; padding: 15px; border: 1px solid #e3e9ef; border-radius: 9px}
-.ml-module-detail-grid dl {display: grid; gap: 8px; margin: 0}
-.ml-module-detail-grid dl>div {display: grid; grid-template-columns: minmax(125px,.8fr) 1.2fr; gap: 8px}
-.ml-module-detail-grid dt code {color: #315b96; font-size: .9rem}
-.ml-module-detail-grid dd {margin: 0; color: #718096; font-size: .9rem; line-height: 1.45}
-.ml-module-detail-grid ul {display: grid; gap: 6px; margin: 0; padding-left: 17px; color: #66768a; font-size: 1rem}
-.ml-score-grid {display: grid; grid-template-columns: repeat(3,1fr); gap: 5px}
-.ml-score-grid span {min-width: 0; padding: 8px; border-radius: 6px; background: #f3f6f9}
+.ml-module-evaluation {margin-top: 17px; padding: 15px; border: 1px solid #e3e9ef; border-radius: 9px}
+.ml-score-grid {display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px}
+.ml-score-grid span {min-width: 0; padding: 10px 12px; border-radius: 6px; background: #f3f6f9}
 .ml-score-grid small {display: block; color: #8a98a8; font-size: .8rem}
 .ml-score-grid b {display: block; overflow: hidden; margin-top: 4px; color: #344b66; font-size: 1rem;
   text-overflow: ellipsis; white-space: nowrap}
-.ml-module-detail-grid>section>p {margin: 10px 0 0; color: #a16207; font-size: .9rem; line-height: 1.5}
-.ml-module-detail-grid>section>p.is-positive {color: #0f8a69}
+.ml-module-evaluation>p {margin: 10px 0 0; color: #a16207; font-size: 1rem; line-height: 1.5}
+.ml-module-evaluation>p.is-positive {color: #0f8a69}
 .ml-module-card>footer {display: flex; gap: 10px; margin-top: 16px; padding: 14px 15px;
   border-left: 3px solid #25a6b9; border-radius: 0 8px 8px 0; color: #137f90; background: #f0fafb}
 .ml-module-card>footer svg {flex: 0 0 auto}
@@ -162,10 +143,8 @@
 .ml-chat-composer button:disabled {opacity: .45; cursor: default}
 .ml-chat>footer {padding: 0 12px 10px; color: #94a3b8; background: #fff; font-size: .8rem; text-align: center}
 @media(max-width:500px){
-  .ml-test-layout {grid-template-columns: minmax(0,1fr) 285px}
-  .ml-module-main, .ml-module-detail-grid {grid-template-columns: 1fr}
+  .ml-module-main {grid-template-columns: 1fr}
   .ml-glossary dl {grid-template-columns: 1fr 1fr}
-  .ml-pipeline ol {grid-template-columns: repeat(4,1fr)}
 }
 @media(max-width:500px){
   .ml-test-page {width: 100%; margin: 0}
@@ -181,8 +160,6 @@
   .ml-test-hero label {min-width: 0}
   .ml-overview {grid-template-columns: 1fr}
   .ml-overview>div {border-right: 0; border-bottom: 1px solid #e5eaf0}
-  .ml-pipeline ol {grid-template-columns: 1fr 1fr}
-  .ml-pipeline li::after {display: none}
   .ml-module-card {padding: 17px}
   .ml-module-heading {align-items: flex-start; flex-wrap: wrap}
   .ml-module-heading em {margin-left: 51px}
@@ -509,29 +486,9 @@
 .react-layer-guide>div svg {color: #3e78a8}
 .react-layer-guide>div b {color: #315775; font-size: .9rem}
 .react-layer-guide>div span {color: #7c8d9c; font-size: .8rem}
-/* ML 학습 파이프라인은 오프라인 학습과 온라인 추론을 두 줄로 분리합니다. */
-.ml-architecture {margin-top: 14px; padding: 17px 18px; border: 1px solid #d7e2ea; border-radius: 10px;
-  background: #fff; box-shadow: 0 5px 14px rgb(35 70 105 / 4%)}
-.ml-architecture>header {display: flex; align-items: center; justify-content: space-between}
-.ml-architecture h2 {margin: 0; color: #29435e; font-size: 1.3rem}
-.ml-architecture header p {margin: 4px 0 0; color: #8291a2; font-size: .9rem}
-.ml-architecture header em {padding: 4px 7px; border-radius: 99px; color: #507498; background: #edf4f9;
-  font-size: .7rem; font-style: normal}
-.ml-architecture>div {display: grid; gap: 9px; margin-top: 13px}
-.ml-architecture>div>section {display: grid; grid-template-columns: 135px minmax(0,1fr); align-items: center;
-  gap: 8px}
-.ml-architecture>div>section>b {color: #3a5b76; font-size: .9rem}
-.ml-architecture>div>section>div {display: flex; align-items: center; gap: 5px}
-.ml-architecture-step {display: flex; min-width: 0; flex: 1; align-items: center; gap: 5px}
-.ml-architecture-step article {display: grid; min-width: 0; flex: 1; justify-items: center; gap: 3px;
-  padding: 8px 5px; border-radius: 7px; color: #356a98; background: #f1f6fa; text-align: center}
-.ml-architecture-step b {color: #3e5c75; font-size: .8rem}
-.ml-architecture-step span {color: #8795a2; font-size: .7rem}
-.ml-architecture-step>svg {flex: 0 0 auto; color: #a4b4c1}
 @media(max-width:500px){
   .system-resource-grid {grid-template-columns: 1fr 1fr}
   .folder-branches summary {grid-template-columns: 25px minmax(100px,.5fr) 1fr auto}
-  .ml-architecture>div>section {grid-template-columns: 1fr}
   .agent-sequence {gap: 8px}
 }
 @media(max-width:500px){
@@ -549,15 +506,11 @@
   .learning-flow-step {flex-basis: 100%}
   .learning-flow-step>span {display: none}
   .react-layer-guide>div {grid-template-columns: 1fr}
-  .ml-architecture>header {align-items: flex-start; flex-direction: column; gap: 7px}
-  .ml-architecture>div>section>div {display: grid; grid-template-columns: 1fr 1fr}
-  .ml-architecture-step>svg {display: none}
 }
 /* 관리자 학습 페이지는 수업용 화면이므로 카드의 보조 설명을 한 단계 키워 읽기 쉽게 합니다. */
 .ml-test-hero>div>span {font-size: 1.3rem}
 .ml-overview small, .ml-overview span {font-size: 1.1rem}
 .ml-overview b {font-size: 1.4rem}
-.ml-pipeline li {font-size: 1.1rem}
 .ml-module-purpose {font-size: 1.3rem}
 .ml-module-notes ul {font-size: 1.1rem}
 .ml-module-notes p {font-size: 1.1rem}
@@ -565,9 +518,6 @@
 .ml-module-notes strong {font-size: 1.3rem}
 .ml-module-chart b {font-size: 1.3rem}
 .ml-module-chart span {font-size: 1rem}
-.ml-module-detail-grid dt code, .ml-module-detail-grid dd {font-size: 1rem}
-.ml-module-detail-grid ul {font-size: 1.1rem}
-.ml-module-detail-grid>section>p {font-size: 1rem}
 .ml-module-card>footer b {font-size: 1.1rem}
 .ml-module-card>footer p {font-size: 1.2rem}
 .ml-glossary header p, .ml-glossary dd {font-size: 1rem}
@@ -683,11 +633,7 @@
   .agent-sequence article p, .agent-output span {
   font-size: 1rem}
 .agent-parallel h3, .agent-sequence h3, .agent-output b {font-size: 1.2rem}
-.ml-architecture header p, .ml-architecture>div>section>b, .ml-architecture-step b {font-size: 1rem}
-.ml-architecture-step span {font-size: .9rem}
 @media(min-width:501px){
-  .ml-test-page {width: 100%}
-  .ml-test-layout {grid-template-columns: minmax(0,1fr) 538px}
   .learning-architecture-layout {grid-template-columns: minmax(0,1fr) 540px}
 }
 /* 머신러닝 결과 화면의 탭·안내·상태·챗봇을 업무 화면 공통 1.2배 비율로 맞춥니다. */
@@ -698,61 +644,24 @@
 .ml-test-page .ml-test-hero label {font-size: 1.32rem}
 .ml-test-page .ml-test-hero select {font-size: 1.44rem}
 .ml-test-page .ml-test-state {font-size: 1.56rem}
-.ml-test-page .ml-chat h2 {font-size: 1.68rem}
-.ml-test-page .ml-chat>header p, .ml-test-page .ml-chat>header i {font-size: 1.08rem}
+.ml-test-page .ml-chat h2 {font-size: 1.48rem}
+.ml-test-page .ml-chat>header p, .ml-test-page .ml-chat>header i {font-size: .92rem}
 .ml-test-page .ml-chat-context, .ml-test-page .ml-chat-empty>p, .ml-test-page .ml-chat-empty button,
   .ml-test-page .ml-chat-message, .ml-test-page .ml-chat-thinking, .ml-test-page .ml-chat-error {
-  font-size: 1.2rem}
-.ml-test-page .ml-chat-empty>b {font-size: 1.32rem}
+  font-size: 1.02rem}
+.ml-test-page .ml-chat-empty>b {font-size: 1.16rem}
 .ml-test-page .ml-chat-message small, .ml-test-page .ml-chat-message li, .ml-test-page .ml-chat-tags span,
   .ml-test-page .ml-chat-message em, .ml-test-page .ml-chat>footer {
-  font-size: 1.08rem}
-.ml-test-page .ml-chat-composer textarea {font-size: 1.32rem}
-.ml-strategy-usage {margin: 22px 0 0; padding: 24px; border-top: 1px solid #dce5ef; background: #f8fafc;
-  color: #334155;}
-.ml-strategy-usage > header {display: flex; align-items: center; justify-content: space-between; gap: 16px;}
-.ml-strategy-usage > header p {color: #2563eb; font-size: 1.2rem; margin: 0 0 5px;}
-.ml-strategy-usage h3 {font-size: 1.8rem; margin: 0;}
-.ml-strategy-usage > header > span {font-size: 1.2rem; color: #1d4ed8; background: #e8efff; padding: 6px 10px;
-  border-radius: 6px; flex-shrink: 0;}
-.ml-strategy-usage p {font-size: 1.4rem; line-height: 1.8; overflow-wrap: anywhere;}
-.ml-usage-flow {display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 0;
-  list-style: none;}
-.ml-usage-flow li {display: flex; align-items: center; gap: 8px; padding: 12px; background: #eaf0f8;
-  font-size: 1.3rem;}
-.ml-usage-flow b {color: #2563eb;}
-.ml-usage-destination, .ml-usage-example {border-left: 3px solid #3b82f6; padding: 10px 16px; margin: 18px 0;
-  background: #fff;}
-.ml-usage-destination strong, .ml-usage-example strong {font-size: 1.4rem;}
-.ml-usage-destination p, .ml-usage-example p {margin: 5px 0 0;}
-.ml-usage-details {margin-top: 14px; border: 1px solid #dce5ef; border-radius: 8px; background: #fff;}
-.ml-usage-details summary {cursor: pointer; padding: 15px; font-size: 1.4rem; font-weight: 650; color: #1e3a5f;}
-.ml-usage-steps {list-style: none; padding: 0 18px; margin: 0;}
-.ml-usage-steps > li {display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; padding: 20px 0;
-  border-top: 1px solid #e7edf4;}
-.ml-usage-step-number {color: #2563eb; font-weight: 700; font-size: 1.4rem;}
-.ml-usage-steps h4 {font-size: 1.5rem; margin: 0 0 8px;}
-.ml-usage-steps code {display: block; overflow-wrap: anywhere; white-space: normal; font-size: 1.2rem;
-  line-height: 1.8; color: #475569;}
-.ml-usage-output {padding: 10px 12px; background: #f1f5f9; border-radius: 5px;}
-.ml-usage-output b {font-size: 1.2rem; color: #1d4ed8;}
-.ml-usage-details pre {margin: 0; padding: 0 18px 18px; overflow-x: auto; font-size: 1.2rem; line-height: 1.9;
-  color: #334155;}
-.ml-usage-limit {color: #64748b; margin-bottom: 0;}
-/* 설명 본문이 고정 폭 챗봇 뒤로 넘치지 않도록 좁은 화면에서는 세로 배치합니다. */
-@media (max-width: 1650px){
+  font-size: .94rem}
+.ml-test-page .ml-chat-composer textarea {font-size: 1.08rem}
+/* 실제로 두 열을 담기 어려운 화면에서만 챗봇을 아래로 배치합니다. */
+@media (max-width: 1100px){
   .ml-test-page .ml-test-layout {grid-template-columns: minmax(0, 1fr);}
   .ml-test-page .ml-chat {position: relative; top: auto; width: 100%; max-width: 100%; box-sizing: border-box;}
 }
 @media (max-width: 1100px){
   .ml-test-page .ml-module-card {min-width: 0;}
-  .ml-test-page .ml-module-main, .ml-test-page .ml-module-detail-grid {grid-template-columns: minmax(0, 1fr);}
-}
-@media (max-width: 700px){
-  .ml-strategy-usage {padding: 16px 10px;}
-  .ml-strategy-usage > header {align-items: flex-start; flex-direction: column;}
-  .ml-usage-flow {grid-template-columns: repeat(2, minmax(0, 1fr));}
-  .ml-usage-steps {padding: 0 12px;}
+  .ml-test-page .ml-module-main {grid-template-columns: minmax(0, 1fr);}
 }
 .is-openai-study .learning-architecture-layout {grid-template-columns: minmax(0, 1fr) 432px;}
 .is-openai-study .learning-architecture-content {min-width: 0;}

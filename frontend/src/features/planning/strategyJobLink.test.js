@@ -20,3 +20,9 @@ test('완료 후 작업 식별자만 지우고 다른 주소 상태는 유지한
   assert.equal(replaced.url.href, 'http://localhost/strategy?view=detail#body')
   assert.deepEqual(replaced.state, { keep: true })
 })
+
+test('재생성 작업은 교체할 원본 ID도 URL에서 복원한다', () => {
+  const job = { job_id: 'new-job', region_code: '42150', replace_report_id: 'old-job' }
+  const url = new URL(strategyJobUrl(job, '강원특별자치도 강릉시'), 'http://localhost:5176')
+  assert.equal(readStrategyJobLink(url).replace_report_id, 'old-job')
+})

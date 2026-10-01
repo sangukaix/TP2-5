@@ -401,6 +401,46 @@ def read_strategy_report(report_id: str) -> dict[str, Any] | None:
     return json.loads(value) if isinstance(value, str) else value
 
 
+def delete_strategy_report(report_id: str) -> bool:
+    """새 기획안으로 교체가 끝난 이전 기획안과 파생 문서를 제거합니다.
+
+    호출자는 새 보고서 저장이 성공한 뒤에만 이 함수를 사용해야 합니다. DB 관련
+    행은 한 트랜잭션에서 지우고, DB가 확인한 명시적 파일 경로만 이후에 정리합니다.
+    """
+    paths: list[Path] = []
+    with _connect() as connection:
+        connection.begin()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    'SELECT word_path, ppt_path FROM strategy_reports WHERE report_id=%s FOR UPDATE',
+                    (report_id,),
+                )
+                row = cursor.fetchone()
+                if not row:
+                    connection.rollback()
+                    return False
+                for value in (row.get('word_path'), row.get('ppt_path')):
+                    if value:
+                        paths.append(Path(value))
+                cursor.execute('DELETE FROM strategy_measurement_followup WHERE report_id=%s', (report_id,))
+                cursor.execute('DELETE FROM strategy_measurement_baseline WHERE report_id=%s', (report_id,))
+                cursor.execute('DELETE FROM strategy_reports WHERE report_id=%s', (report_id,))
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+    for path in paths:
+        try:
+            path.unlink(missing_ok=True)
+            _document_metadata_path(path).unlink(missing_ok=True)
+        except OSError:
+            # DB 교체는 완료됐습니다. 남은 고아 파일은 운영 정리 대상이며 새 기획안에
+            # 연결되지 않으므로 다운로드 일관성에는 영향을 주지 않습니다.
+            pass
+    return True
+
+
 def _report_fingerprint(value: Any) -> str:
     """DB의 JSON 표현 차이와 무관한 기획안 내용 지문을 만듭니다."""
     if isinstance(value, str):

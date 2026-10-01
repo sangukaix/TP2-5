@@ -27,8 +27,19 @@ export function applyReportPatch(report, patch) {
   if (!numericUpdates.execution_scenario && (patch.solution || patch.strategy_title || numericUpdates.reference_estimate)) {
     numericUpdates.target_proposal_basis = { ...report.target_proposal_basis, capacity_plan: undefined }
   }
+  const presentationEdits = Array.isArray(patch.presentation_edits) ? patch.presentation_edits.filter((edit) =>
+    Number.isInteger(edit?.slide_number) && edit.slide_number >= 1 && edit.slide_number <= 40
+    && typeof edit.target_text === 'string' && edit.target_text.trim() && edit.target_text.length <= 200
+    && ['append', 'prepend', 'replace', 'style'].includes(edit.operation)
+    && typeof edit.text === 'string' && edit.text.length <= 80
+    && (edit.text_color == null || /^#?[0-9a-f]{6}$/i.test(edit.text_color))
+    && (edit.font_size_pt == null || (Number.isFinite(edit.font_size_pt) && edit.font_size_pt >= 8 && edit.font_size_pt <= 72))
+    && (edit.font_family == null || (typeof edit.font_family === 'string' && edit.font_family.length <= 80))
+    && (edit.bold == null || typeof edit.bold === 'boolean')
+    && (edit.alignment == null || ['left', 'center', 'right'].includes(edit.alignment))) : null
   return { ...report, ...numericUpdates,
     summary: typeof patch.summary === 'string' && patch.summary.trim() ? patch.summary.trim() : report.summary,
+    ...(presentationEdits ? { presentation_edits: presentationEdits } : {}),
     strategies: [updated, ...report.strategies.slice(1)],
     quality_review: { ...report.quality_review, approved: false, review_stale: true },
   }

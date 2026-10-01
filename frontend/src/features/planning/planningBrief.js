@@ -25,8 +25,8 @@ export function nextThreeMonthSchedule(now = new Date()) {
   const start = new Date(Date.UTC(korea.getUTCFullYear(), korea.getUTCMonth() + offset, 1))
   return threeMonthSchedule(start.toISOString().slice(0, 7))
 }
-export function simplifiedDraft(code) {
-  const prior = readPlanningDraft(code)
+export function simplifiedDraft(code, { restorePrevious = true } = {}) {
+  const prior = restorePrevious ? readPlanningDraft(code) : emptyPlanningBrief(code)
   return { ...emptyPlanningBrief(code), input_profile: 'guided_v2', business_direction: prior.business_direction || 'auto', excluded_operations: [],
     budget_status: prior.budget_max_krw ? 'indicative' : 'unknown', budget_max_krw: prior.budget_max_krw,
     ...nextThreeMonthSchedule(),

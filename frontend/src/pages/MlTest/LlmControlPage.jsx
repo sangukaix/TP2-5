@@ -6,7 +6,6 @@ import LearningSectionNav from './LearningSectionNav'
 import { getLlmConfig, getLlmOverview, getLlmStatus, getLlmTrace, resetLlmConfig, saveLlmConfig } from '../../api/llmControlApi'
 import './mlTest.css'
 import './LlmControlPage.css'
-import RouterPipelineGuide from './RouterPipelineGuide'
 import { ProjectTutor } from './LearningArchitecturePage'
 
 const LABELS = {
@@ -102,14 +101,10 @@ export default function LlmControlPage() {
     finally { if (alive.current) setChecking(false) }
   }
   return <WorkspaceShell><main className="ml-test-page llm-control-page admin-study-page"><LearningSectionNav /><div className="learning-architecture-layout"><div className="learning-architecture-content">
-    <RouterPipelineGuide status={status} />
-    <header className="ml-test-hero"><div><p>LLM CONTROL CENTER</p><h1>AI Router</h1><span>로컬우선(Gemma)은 비교·작성·검수·로컬 챗봇을 Gemma가 담당합니다. 기존 로컬 우선은 Qwen과 Gemma가 역할을 나눕니다. OpenAI는 필요한 공식 웹 조사와 독립 최종 검수를 맡습니다. 학생 절약 모드는 무료 공식 검색 API와 저장 근거를 우선 사용하고 OpenAI 최종 검수 1회만 허용합니다. ACTIVE는 연결 확인이며, 실제 추론은 실행 기록으로 확인합니다.</span></div><button type="button" onClick={refresh} disabled={busy}><RefreshCw size={15} />새로고침</button></header>
-    {status?.cost_policy?.student_budget ? <p className="llm-control-message">학생 절약 모드 적용 중 · Qwen·Gemma가 비교·작성·재검수를 수행 · OpenAI 웹 조사는 자동 실행하지 않음 · 무료 검색 API 키가 있으면 Qwen 질문으로 공식 도메인 원문 후보만 제한 조회 · 로컬 검수 통과본만 OpenAI 독립 최종 검수 1회 · 저장 근거가 부족하면 미승인으로 남습니다.</p> : status?.cost_policy?.local_first && <p className="llm-control-message">{status.cost_policy.gemma_only_local ? '로컬우선(Gemma) · Qwen 사용 안 함' : '로컬 우선 적용 중'} · 기획 생성 1건의 OpenAI 요청 최대 3회 · 로컬 요청 제한 {Math.round((status.cost_policy.local_llm_timeout_seconds || 1800) / 60)}분 · 로컬 실패 시 유료 자동 대체 없음 · 로컬 검수 미통과 시 최종 유료 검수 생략. 웹검색 내부 호출·토큰에 따른 금액 상한을 뜻하지 않습니다.</p>}
-    {status?.cost_policy?.free_official_web_search && <p className="llm-control-message">무료 공식 검색 도구 · {status.cost_policy.free_official_web_search.configured_providers?.length ? `${status.cost_policy.free_official_web_search.configured_providers.join(' → ')} 연결됨` : 'API 키 미설정'} · 보고서 1건당 최대 {status.cost_policy.free_official_web_search.max_queries_per_report}개 질문 · 검색 요약은 원문 검수 전 후보로만 사용</p>}
-    {message && <p className="llm-control-message"><AlertCircle size={14} />{message}</p>}
-    <div className="router-connection-bar"><p>이 화면의 자동 갱신은 저장 설정과 실행 기록만 읽습니다. 모델 연결은 아래 버튼으로 확인합니다.</p><button type="button" disabled={checking} onClick={checkConnection}>{checking ? '연결 확인 중…' : '모델 연결 확인 (추론 없음)'}</button></div>
-    <section className="llm-provider-grid">{status?.providers?.map((provider) => { const role = provider.role || provider.provider; const label = role === 'openai' ? 'OpenAI' : role === 'qwen' ? 'Qwen · Ollama' : 'Gemma · Ollama'; return <article key={role} className={`is-${provider.status}`}><header><ServerCog size={18} /><div><b>{label}</b><span>{provider.message}</span></div><em>{provider.status === 'active' ? <CheckCircle2 size={14} /> : <ShieldAlert size={14} />}{provider.status}</em></header><p>{provider.models?.join(' · ') || '모델 목록 확인 필요'}</p><footer>{provider.capabilities?.map((item) => <i key={item}>{item}</i>)}</footer></article> })}</section>
-    {hasEdits && <p className="llm-control-message">저장하지 않은 설정이 있습니다. 위 파이프라인은 서버에 적용된 설정입니다.</p>}
+    <header className="llm-control-heading"><h1>AI Router</h1><div><button type="button" onClick={refresh} disabled={busy}><RefreshCw size={15} />새로고침</button><button type="button" disabled={checking} onClick={checkConnection}>{checking ? '연결 확인 중…' : '모델 연결 확인'}</button></div></header>
+    {message && <p className="llm-control-feedback" role="status"><AlertCircle size={14} />{message}</p>}
+    {status?.providers?.length > 0 && <section className="llm-provider-grid">{status.providers.map((provider) => { const role = provider.role || provider.provider; const label = role === 'openai' ? 'OpenAI' : role === 'qwen' ? 'Qwen · Ollama' : 'Gemma · Ollama'; return <article key={role} className={`is-${provider.status}`}><header><ServerCog size={18} /><div><b>{label}</b><span>{provider.message}</span></div><em>{provider.status === 'active' ? <CheckCircle2 size={14} /> : <ShieldAlert size={14} />}{provider.status}</em></header><p>{provider.models?.join(' · ') || '모델 목록 확인 필요'}</p><footer>{provider.capabilities?.map((item) => <i key={item}>{item}</i>)}</footer></article> })}</section>}
+    {hasEdits && <p className="llm-control-feedback" role="status">저장하지 않은 설정이 있습니다.</p>}
     {config && <section className="llm-routing-panel">
       <header><div><Bot size={19} /><div><h2>작업별 라우팅</h2><p>저장 후 실제 적용 경로를 표시합니다. 설정 변경에는 관리자 토큰이 필요합니다.</p></div></div>
         <label>모드<select value={config.mode} disabled={busy} onChange={(event) => editConfig({ ...config, mode: event.target.value })}>

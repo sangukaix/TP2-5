@@ -348,17 +348,27 @@ VWorld WFS의 전국 시군구 경계를 Backend에서 불러와, 키가 없는 
 
 ## ML 학습 페이지 카탈로그
 
+`GET /ai/v1/ml/learning/regions`
+
+- 등록된 지역의 `region_code`, `region_name`만 반환한다. 모델 파일 로드와 예측을 실행하지 않으므로 관리자 화면의 지역 선택 목록에 사용한다.
+
+`GET /ai/v1/ml/learning/catalog/{region_code}`
+
+- 선택한 지역 한 곳의 7개 예측 지표·모델·평가 정보를 반환한다. 미등록 지역은 404다.
+- 관리자 머신러닝 결과 화면은 이 API를 지역 선택 시에만 호출하고, 이미 본 지역은 탭 안에서 재사용한다.
+
 `GET /ai/v1/ml/learning/catalog`
 
-- `region_registry.py`에 등록된 모델만 지역 선택 목록에 반환한다.
-- 모델 메타데이터의 `target`을 순회해 데이터셋, 모델, Feature, 함수, 기법, Test 오차와 3개월 결과를 카드 단위로 반환한다.
+- 이전 호출자를 위한 전체 카탈로그다. 모든 등록 지역의 예측을 계산하므로 관리자 화면 초기 로딩에는 사용하지 않는다.
+- `region_registry.py`에 등록된 모델만 반환한다.
+- 모델 메타데이터의 `target`을 순회해 데이터셋, 모델, Feature, 함수, 기법, Test 오차와 3개월 결과를 카드 단위로 반환한다. 관리자 화면은 이 중 사용 데이터·모델·Test 오차·3개월 결과를 표시한다.
 - 새 지역이나 새 Target이 동일 계약으로 등록되면 React의 `MlTest` 페이지는 별도 카드 코드를 추가하지 않고 자동으로 목록을 늘린다.
 - 학습용 읽기 전용 API이며 OpenAI, Open API, 모델 재학습을 실행하지 않는다.
 
 ### `POST /ai/v1/ml/learning/{region_code}/assistant`
 
 - 요청: `question`, 최근 대화 `history` 최대 6개.
-- AI Server가 선택 지역의 등록 모델 카탈로그, 코드 역할표, 기획안 전망기간 규칙을 OpenAI Responses API에 전달한다.
+- AI Server가 선택 지역 한 곳의 등록 모델 카탈로그, 코드 역할표, 기획안 전망기간 규칙을 OpenAI Responses API에 전달한다.
 - 답변: `answer`, `key_points`, `related_modules`, `caution`의 구조화 JSON이다.
 - 현재 ML 챗봇은 RAG·웹 검색을 사용하지 않는다. OpenAI 키가 없으면 `503 OPENAI_KEY_MISSING`, 미지원 지역은 `404 ML_LEARNING_REGION_UNAVAILABLE`을 반환한다.
 
@@ -601,3 +611,9 @@ D-175: PPT `pptx-v36-operating-capacity`, Word `strategy-docx-v13-operating-capa
 - 생성 작업 응답의 persistence_status: unknown(이전 작업 등), saved(본문 MySQL 저장 완료), failed(본문 저장 실패). 생성 완료와 저장 성공을 구분한다. 문서 변환 경고는 본문 저장 성공을 무효화하지 않는다.
 - PDF 미리보기는 보고서 전체 JSON과 PPT 렌더 버전 지문을 캐시 키로 사용한다. 동일 보고서 요청은 재변환하지 않으며 보고서/양식 변경 시 별도 결과다. Word/PPT 다운로드 계약은 유지한다. 변환 슬롯 대기 15초, Office 하위 프로세스 제한 180초이며 전체 문서 작성 시간 상한을 뜻하지 않는다.
 - ML 학습 챗봇은 OpenAI 키 부재를 전체 모델 카탈로그 계산 전에 반환한다.
+
+## 2026-09-24 기획안 구조 변경과 재생성
+
+- `POST /ai/v1/demo/{region_code}/assistant-chat`는 현재 보고서에서 후보 변경 또는 전체 예산 편성 변경을 감지하면 `mode=regenerate`, `report_patch=null`, `regeneration_request`를 반환한다. 후보 번호·예산 금액 판별에는 LLM을 호출하지 않는다.
+- 사용자가 확인한 뒤 기존 생성 endpoint에 `region_name`, 변경된 `planning_brief`, `regeneration_request`를 전송한다. `regeneration_request`는 `reason`, `request_text`, `source_report_id`와 후보 또는 예산 필드를 포함한다.
+- 서버는 `source_report_id`의 MySQL 저장본과 지역·후보 ID·제목·예산을 다시 검증한다. 새 보고서와 문서 저장이 끝나야 원본 보고서를 제거하며 실패·취소·오프라인 샘플에서는 원본을 유지한다.

@@ -42,6 +42,7 @@ from .tourism_open_api import TourismOpenApiClient
 from .planning_brief import PlanningBrief, next_three_months, resolve_new_planning_brief, brief_fingerprint, extract_brief_reference, without_reference_text
 from .project_learning_catalog import ProjectLearningCatalog, build_project_learning_catalog
 from .strategy_store import (
+    delete_strategy_report,
     initialize_strategy_store,
     list_interrupted_strategy_jobs,
     list_strategy_reports,
@@ -56,13 +57,20 @@ from .strategy_store import (
     update_strategy_job_state,
     write_document,
 )
+from .report_regeneration import detect_report_regeneration
 from ..ml.gangnam_data import load_latest_consumption_shares
 from ..ml.region_service import predict_region_demand
 from ..ml.region_registry import get_region_pipeline
 from ..ml.region_catalog import list_region_data_catalog
 from ..ml.planning_evidence import PlanningMlEvidence, build_planning_ml_evidence
 from ..ml.data_freshness import DataFreshnessStatus, assess_data_freshness
-from ..ml.learning_catalog import MlLearningCatalog, build_ml_learning_catalog
+from ..ml.learning_catalog import (
+    MlLearningCatalog,
+    MlLearningRegion,
+    MlLearningRegionOptions,
+    build_ml_learning_catalog,
+    list_ml_learning_region_options,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 # 빈 Windows 환경변수가 .env의 LAN Ollama 주소를 덮어쓰지 않도록 합칩니다.
@@ -184,11 +192,28 @@ async def clear_byok_credentials() -> None:
     await BYOK_VAULT.clear()
 
 
+class ReportRegenerationRequest(BaseModel):
+    """사용자가 확인한 전체 재생성 조건입니다.
+
+    source_candidate는 브라우저 값을 신뢰하지 않고 작업 등록 시 저장본에서 다시 채웁니다.
+    """
+
+    reason: Literal['candidate_change', 'budget_change']
+    request_text: str = Field(min_length=1, max_length=1000)
+    source_report_id: str = Field(pattern=r'^[\w-]{1,64}$')
+    requested_candidate_id: str = Field(default='', max_length=120)
+    requested_candidate_title: str = Field(default='', max_length=300)
+    requested_candidate_index: int | None = Field(default=None, ge=1, le=20)
+    requested_budget_krw: int | None = Field(default=None, ge=1, le=1_000_000_000_000)
+    source_candidate: dict[str, Any] = Field(default_factory=dict)
+
+
 class ReportRequest(BaseModel):
     """선택 지역의 검증된 원자료로 종합 보고서를 생성합니다."""
 
     region_name: str
     planning_brief: PlanningBrief | None = None
+    regeneration_request: ReportRegenerationRequest | None = None
 
 
 class ByokSessionCreateRequest(BaseModel):
@@ -289,6 +314,20 @@ class ExecutionScenario(BaseModel):
     target_origin: Literal['user', 'operating_capacity'] | None = None
 
 
+class PresentationEdit(BaseModel):
+    """AI 챗봇이 요청받은 문구와 스타일만 PPT에 적용하는 제한된 편집 명령입니다."""
+
+    slide_number: int = Field(ge=1, le=40)
+    target_text: str = Field(min_length=1, max_length=200)
+    operation: Literal['append', 'prepend', 'replace', 'style']
+    text: str = Field(default='', max_length=80)
+    text_color: str | None = Field(default=None, pattern=r'^#?[0-9A-Fa-f]{6}$')
+    font_size_pt: float | None = Field(default=None, ge=8, le=72)
+    font_family: str | None = Field(default=None, max_length=80)
+    bold: bool | None = None
+    alignment: Literal['left', 'center', 'right'] | None = None
+
+
 class ReportResponse(BaseModel):
     """React가 표로 바로 렌더링할 수 있는, 검증된 구조의 AI 응답입니다."""
 
@@ -316,6 +355,7 @@ class ReportResponse(BaseModel):
     planning_decision: dict[str, Any] = Field(default_factory=dict)
     target_proposal_basis: dict[str, Any] = Field(default_factory=dict)
     reference_estimate: dict[str, Any] = Field(default_factory=dict)
+    presentation_edits: list[PresentationEdit] = Field(default_factory=list, max_length=20)
 
 
 class StrategyReportJobResponse(BaseModel):
@@ -366,10 +406,11 @@ class AssistantSource(BaseModel):
 
 class AssistantChatResponse(BaseModel):
     answer: str
-    mode: Literal['explain', 'research', 'revise']
+    mode: Literal['explain', 'research', 'revise', 'regenerate']
     key_points: list[str] = Field(default_factory=list)
     sources: list[AssistantSource] = Field(default_factory=list)
     report_patch: dict[str, Any] | None = None
+    regeneration_request: dict[str, Any] | None = None
     generation_mode: Literal['openai', 'local', 'offline_sample'] = 'openai'
     execution: dict[str, Any] = Field(default_factory=dict)
 
@@ -1332,6 +1373,10 @@ async def generate_orchestrated_report(
     if request.planning_brief and request.planning_brief.region_code != region_code:
         raise HTTPException(status_code=422, detail={'code': 'BRIEF_REGION_MISMATCH', 'message': '기획 조건의 지역과 선택 지역이 다릅니다.'})
     brief = request.planning_brief.model_dump(mode='json') if request.planning_brief else None
+    regeneration_request = (
+        request.regeneration_request.model_dump(mode='json')
+        if request.regeneration_request else None
+    )
     runtime_env = env_values or ENV_VALUES
     snapshot = snapshot or build_region_snapshot(request.region_name)
     _raise_if_strategy_generation_is_stale(snapshot)
@@ -1343,6 +1388,7 @@ async def generate_orchestrated_report(
             snapshot=snapshot,
             report_schema=REPORT_SCHEMA,
             planning_brief=brief,
+            regeneration_request=regeneration_request,
             cancellation_event=cancellation_event,
         )
         # Targets come from explicit user conditions, never from generated JSON.
@@ -1391,6 +1437,7 @@ def _persist_completed_strategy_report(
     report: ReportResponse,
     snapshot: dict[str, Any] | None = None,
     cancellation_event: asyncio.Event | None = None,
+    replace_report_id: str = '',
 ) -> list[str]:
     """완료된 기획안을 MySQL과 로컬 서버 문서 폴더에 한 번만 영구 저장합니다."""
     if cancellation_event and cancellation_event.is_set():
@@ -1417,6 +1464,11 @@ def _persist_completed_strategy_report(
             LOGGER.warning('Strategy document save failed: job_id=%s format=%s error=%s',
                            job_id, file_format, type(exc).__name__)
             warnings.append(f'{file_format.upper()} 파일 준비 실패: 다운로드 시 다시 시도할 수 있습니다.')
+    # 새 본문을 DB에 저장한 뒤에만 사용자가 교체를 승인한 이전 기획안을 지웁니다.
+    # 생성·저장 실패 시에는 이 지점에 도달하지 않아 기존 기획서가 그대로 남습니다.
+    if (replace_report_id and replace_report_id != job_id
+            and payload.get('generation_mode') != 'offline_sample'):
+        delete_strategy_report(replace_report_id)
     return warnings
 
 
@@ -1521,6 +1573,7 @@ async def _run_strategy_report_job(
             warnings = await asyncio.to_thread(
                 _persist_completed_strategy_report, job_id, region_code, job['report'], snapshot,
                 cancellation_event,
+                request.regeneration_request.source_report_id if request.regeneration_request else '',
             )
             if cancellation_event.is_set():
                 raise asyncio.CancelledError('Strategy report persistence was cancelled.')
@@ -1713,8 +1766,23 @@ async def read_planning_ml_evidence(region_code: str, region_name: str) -> Plann
 
 @app.get('/ai/v1/ml/learning/catalog', response_model=MlLearningCatalog)
 async def read_ml_learning_catalog() -> MlLearningCatalog:
-    """학습용 화면에서 등록된 지역별 모델·함수·예측·평가를 한 번에 확인합니다."""
+    """호환용 전체 카탈로그입니다. 화면은 가벼운 지역별 API를 사용합니다."""
     return await asyncio.to_thread(build_ml_learning_catalog)
+
+
+@app.get('/ai/v1/ml/learning/regions', response_model=MlLearningRegionOptions)
+async def read_ml_learning_regions() -> MlLearningRegionOptions:
+    """모델 로드나 예측 없이 지역 선택 목록을 바로 반환합니다."""
+    return list_ml_learning_region_options()
+
+
+@app.get('/ai/v1/ml/learning/catalog/{region_code}', response_model=MlLearningRegion)
+async def read_ml_learning_region(region_code: str) -> MlLearningRegion:
+    """선택한 한 지역의 7개 지표만 읽고 예측합니다."""
+    catalog = await asyncio.to_thread(build_ml_learning_catalog, region_code)
+    if not catalog.regions:
+        raise HTTPException(status_code=404, detail='등록되지 않은 ML 지역입니다.')
+    return catalog.regions[0]
 
 
 @app.post('/ai/v1/ml/learning/{region_code}/assistant', response_model=MlLearningChatResponse)
@@ -1730,7 +1798,7 @@ async def chat_with_ml_learning_assistant(
             status_code=503,
             detail={'code': 'OPENAI_KEY_MISSING', 'message': 'ML 챗봇을 사용하려면 AI 서버의 OpenAI API 키가 필요합니다.'},
         )
-    catalog = await asyncio.to_thread(build_ml_learning_catalog)
+    catalog = await asyncio.to_thread(build_ml_learning_catalog, region_code)
     region = next((item for item in catalog.regions if item.region_code == region_code), None)
     if region is None or region.status != 'available':
         raise HTTPException(
@@ -2059,6 +2127,41 @@ async def read_planning_reference(request: Request, filename: str) -> dict:
         raise HTTPException(status_code=422, detail={'code': 'REFERENCE_INVALID', 'message': message}) from exc
 
 
+def _validated_regeneration_request(
+    region_code: str,
+    request: ReportRequest,
+) -> ReportRequest:
+    """저장된 원본과 일치하는 재생성 요청만 작업 큐로 전달합니다."""
+    regeneration = request.regeneration_request
+    if not regeneration:
+        return request
+    source_report = read_strategy_report(regeneration.source_report_id)
+    source_region_code = str(((source_report or {}).get('planning_brief') or {}).get('region_code') or '')
+    if not source_report or source_region_code != region_code:
+        raise HTTPException(status_code=404, detail={
+            'code': 'REGENERATION_SOURCE_NOT_FOUND',
+            'message': '다시 생성할 원본 기획안을 게시판에서 찾지 못했습니다.',
+        })
+    if regeneration.reason == 'candidate_change':
+        candidates = (source_report.get('planning_decision') or {}).get('design_candidates') or []
+        candidate = next((row for row in candidates
+                          if str(row.get('candidate_id') or '') == regeneration.requested_candidate_id), None)
+        if not candidate or str(candidate.get('title') or '') != regeneration.requested_candidate_title:
+            raise HTTPException(status_code=422, detail={
+                'code': 'REGENERATION_CANDIDATE_MISMATCH',
+                'message': '선택한 후보가 현재 저장된 기획안과 일치하지 않습니다. 기획안을 새로 불러온 뒤 다시 선택해 주세요.',
+            })
+        regeneration = regeneration.model_copy(update={'source_candidate': candidate}, deep=True)
+    elif regeneration.reason == 'budget_change':
+        requested_budget = regeneration.requested_budget_krw
+        if not requested_budget or not request.planning_brief or request.planning_brief.budget_max_krw != requested_budget:
+            raise HTTPException(status_code=422, detail={
+                'code': 'REGENERATION_BUDGET_MISMATCH',
+                'message': '확인한 예산과 새 기획 조건의 예산이 일치하지 않습니다.',
+            })
+    return request.model_copy(update={'regeneration_request': regeneration}, deep=True)
+
+
 @app.post('/ai/v1/demo/{region_code}/strategy-report/jobs', response_model=StrategyReportJobResponse, status_code=202)
 async def start_region_strategy_report_job(
     region_code: str,
@@ -2069,6 +2172,7 @@ async def start_region_strategy_report_job(
     request = request.model_copy(update={'planning_brief': resolve_new_planning_brief(request.planning_brief or PlanningBrief(region_code=region_code, input_profile='guided_v2'))}, deep=True)
     if request.planning_brief and request.planning_brief.region_code != region_code:
         raise HTTPException(status_code=422, detail={'code': 'BRIEF_REGION_MISMATCH', 'message': '기획 조건의 지역과 선택 지역이 다릅니다.'})
+    request = _validated_regeneration_request(region_code, request)
     # 큐 등록 전에 차단해 오래된 자료에서 OpenAI·로컬 LLM·문서 렌더링이 시작되지 않게 합니다.
     # 기존 대시보드·저장 기획안 조회와 다운로드에는 영향을 주지 않습니다.
     try:
@@ -2262,6 +2366,9 @@ async def chat_with_tourism_assistant(
 ) -> AssistantChatResponse:
     """지역 원자료·현재 기획안·공식 웹 자료를 근거로 설명하거나 수정안을 제안합니다."""
     if request.current_report:
+        regeneration = detect_report_regeneration(request.current_report, request.question)
+        if regeneration:
+            return AssistantChatResponse(**regeneration)
         from .idea_proposal import bounded_chat_reply
         direct = bounded_chat_reply(request.current_report, request.question)
         if direct:

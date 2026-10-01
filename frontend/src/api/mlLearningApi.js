@@ -8,6 +8,18 @@ export async function getMlLearningCatalog() {
   return response.json()
 }
 
+export async function getMlLearningRegions(signal) {
+  const response = await fetch('/ai/v1/ml/learning/regions', { signal })
+  if (!response.ok) throw new Error('분석 지역 목록을 불러오지 못했습니다.')
+  return response.json()
+}
+
+export async function getMlLearningRegion(regionCode, signal) {
+  const response = await fetch(`/ai/v1/ml/learning/catalog/${encodeURIComponent(regionCode)}`, { signal })
+  if (!response.ok) throw new Error('선택 지역의 머신러닝 결과를 불러오지 못했습니다.')
+  return response.json()
+}
+
 /**
  * 선택 지역의 실제 모델 카탈로그를 근거로 ML 질문을 보냅니다.
  * OpenAI 키와 프롬프트는 AI Server에만 있고 브라우저에는 노출하지 않습니다.

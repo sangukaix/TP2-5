@@ -40,3 +40,12 @@ test('잘린 실행 단계로 기존 단계를 덮어쓰지 않는다', () => {
   assert.deepEqual(applyReportPatch(report, { implementation_steps: [{}] }).strategies[0].implementation_steps, report.strategies[0].implementation_steps)
   assert.equal(applyReportPatch(null, {}), null)
 })
+
+test('검증된 슬라이드 시각 편집만 보고서에 보존한다', () => {
+  const report = { summary: '요약', strategies: [{}], quality_review: { approved: true } }
+  const valid = { slide_number: 1, target_text: '강릉시', operation: 'append', text: '♡',
+    text_color: '#F50045', font_size_pt: 30, font_family: 'Noto Sans KR', bold: true, alignment: 'left' }
+  const next = applyReportPatch(report, { presentation_edits: [valid, { ...valid, slide_number: 99 }] })
+  assert.deepEqual(next.presentation_edits, [valid])
+  assert.equal(report.presentation_edits, undefined)
+})

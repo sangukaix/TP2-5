@@ -26,6 +26,7 @@ from ..llm.router import LLMRouter
 from .planner_agent import PlannerAgent
 from .reviewer_agent import ReviewerAgent
 from .transferability_agent import TransferabilityAgent
+from ..report_regeneration import enforce_requested_candidate
 from .decision_facts import build_decision_facts
 from ...ml.planning_evidence import build_planning_ml_evidence
 
@@ -218,6 +219,7 @@ async def orchestrate_strategy_report(
     snapshot: dict[str, Any],
     report_schema: dict[str, Any],
     planning_brief: dict[str, Any] | None = None,
+    regeneration_request: dict[str, Any] | None = None,
     cancellation_event: asyncio.Event | None = None,
 ) -> dict[str, Any]:
     _raise_if_cancelled(cancellation_event)
@@ -280,6 +282,7 @@ async def orchestrate_strategy_report(
     evidence_pack, evidence_cache_hit = evidence_result
     # 사용자가 입력한 여건을 snapshot(공식 관측값)에 섞지 않습니다.
     evidence_pack['planning_brief'] = deepcopy(planning_brief)
+    evidence_pack['regeneration_request'] = deepcopy(regeneration_request)
     # 테스트 대역·다른 근거 수집기에서도 동일한 검증 snapshot이 후속 3개 Agent에 전달됩니다.
     evidence_pack['snapshot'] = snapshot
     case_pack, case_cache_hit = case_result
@@ -410,6 +413,21 @@ async def orchestrate_strategy_report(
             'agent': 'transferability', 'stage': 'candidate_stabilization',
             'status': 'completed' if corrections else 'skipped',
             'corrections': len(corrections),
+        })
+        remaining = candidate_delivery_issues(evidence_pack, transfer_assessment)
+
+    if regeneration_request and regeneration_request.get('reason') == 'candidate_change':
+        try:
+            transfer_assessment = enforce_requested_candidate(transfer_assessment, regeneration_request)
+        except ValueError as exc:
+            raise OpenAIResponseError(
+                'REGENERATION_CANDIDATE_UNAVAILABLE', str(exc), status_code=422, attempts=trace,
+            ) from exc
+        evidence_pack['transfer_assessment'] = transfer_assessment
+        trace.append({
+            'agent': 'transferability', 'stage': 'user_candidate_selection',
+            'status': 'completed',
+            'selected_candidate_id': transfer_assessment.get('selected_candidate_id'),
         })
         remaining = candidate_delivery_issues(evidence_pack, transfer_assessment)
 

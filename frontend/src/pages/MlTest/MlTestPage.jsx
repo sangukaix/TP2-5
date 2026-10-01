@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, ArrowRight, BarChart3, BookOpen, Bot, BrainCircuit, CheckCircle2, Code2, Cpu, Database, HardDrive, LoaderCircle, Monitor, Send, Server, Sparkles } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { AlertCircle, BarChart3, BookOpen, Bot, CheckCircle2, Database, LoaderCircle, Send, Sparkles } from 'lucide-react'
 import {
   CartesianGrid,
   Legend,
@@ -11,52 +11,11 @@ import {
   YAxis,
 } from 'recharts'
 import '../../App.css'
-import { chatWithMlLearningAssistant, getMlLearningCatalog } from '../../api/mlLearningApi'
+import { chatWithMlLearningAssistant, getMlLearningRegion, getMlLearningRegions } from '../../api/mlLearningApi'
 import WorkspaceShell from '../../components/WorkspaceShell'
 import LearningSectionNav from './LearningSectionNav'
 import useLearningAssistantStatus from './useLearningAssistantStatus'
 import './mlTest.css'
-
-const FUNCTION_DESCRIPTIONS = {
-  'load_gangnam_monthly_demand()': '공식 ZIP에서 월별 방문자·소비·숙박 데이터를 읽어 하나의 표로 만듭니다.',
-  'validate_monthly_data()': '월 누락, 지역코드 혼입, 결측·음수 등 학습 불가능한 데이터를 검사합니다.',
-  'make_supervised_frame()': '과거 값을 Feature로, 다음 달 값을 Target으로 갖는 지도학습 표를 만듭니다.',
-  'make_lodging_supervised_frame()': '평균 숙박일수 전용 시차 Feature와 Target을 만듭니다.',
-  'make_univariate_supervised_frame()': '지표별 1·3·12개월 전 값으로 공통 지도학습 표를 만듭니다.',
-  'select_and_evaluate()': 'Validation MAE로 후보 모델과 전년 동월 기준모델 중 하나를 선택합니다.',
-  'error_metrics()': 'MAE·RMSE·MAPE를 계산해 예측 오차를 수치로 확인합니다.',
-  'predict_future_months()': '직전 예측값을 다음 달 입력에 넣는 방식으로 향후 3개월을 예측합니다.',
-  'predict_region_future_months()': '지역별 저장 모델을 읽어 재귀 예측합니다. 기준선이 선택된 지표는 전년 동월 값을 사용합니다.',
-}
-
-const FEATURE_LABELS = {
-  visitors_lag_1: '방문자 수 1개월 전',
-  visitors_lag_3: '방문자 수 3개월 전',
-  visitors_lag_12: '방문자 수 12개월 전',
-  spending_lag_1: '소비액 1개월 전',
-  spending_lag_3: '소비액 3개월 전',
-  spending_lag_12: '소비액 12개월 전',
-  lodging_lag_1: '숙박일수 1개월 전',
-  lodging_lag_3: '숙박일수 3개월 전',
-  lodging_lag_12: '숙박일수 12개월 전',
-  lodging_nights_lag_1: '평균 숙박일수 1개월 전',
-  lodging_nights_lag_3: '평균 숙박일수 3개월 전',
-  lodging_nights_lag_12: '평균 숙박일수 12개월 전',
-  lodging_rate_pct_lag_1: '숙박방문 비율 1개월 전',
-  lodging_rate_pct_lag_3: '숙박방문 비율 3개월 전',
-  lodging_rate_pct_lag_12: '숙박방문 비율 12개월 전',
-  stay_minutes_lag_1: '평균 체류시간 1개월 전',
-  stay_minutes_lag_3: '평균 체류시간 3개월 전',
-  stay_minutes_lag_12: '평균 체류시간 12개월 전',
-  navigation_searches_lag_1: '내비검색 1개월 전',
-  navigation_searches_lag_3: '내비검색 3개월 전',
-  navigation_searches_lag_12: '내비검색 12개월 전',
-  lodging_searches_lag_1: '숙박검색 1개월 전',
-  lodging_searches_lag_3: '숙박검색 3개월 전',
-  lodging_searches_lag_12: '숙박검색 12개월 전',
-  month_sin: '월 계절성 sin',
-  month_cos: '월 계절성 cos',
-}
 
 const GLOSSARY = [
   ['Feature', '모델이 예측에 참고하는 입력값'],
@@ -109,30 +68,7 @@ function MetricTooltip({ active, payload, label, unit }) {
   )
 }
 
-function ModuleStrategyUsage({ module }) {
-  const usage = module.strategy_usage
-  if (!usage?.steps?.length) return null
-  return <section className="ml-strategy-usage" aria-label={`${module.target_name} 전략 연결 설명`}>
-    <header><div><p>예측에서 전략까지 · 구현 경로</p><h3>이 결과를 누가, 어떻게 사용하는가</h3></div><span>{usage.role}</span></header>
-    <p>{usage.interpretation}</p>
-    <ol className="ml-usage-flow" aria-label="처리 단계 요약">
-      {['공식 월별 표', '저장 모델 추론', '기간 비교·조사 질문', '공식 사례 확보', 'Qwen 비교·Gemma 작성', '검수·화면·문서'].map((label, i) => <li key={label}><b>{i + 1}</b>{label}</li>)}
-    </ol>
-    <div className="ml-usage-destination"><strong>이 수치가 표시되는 곳</strong><p>{usage.display}</p></div>
-    <details className="ml-usage-details" open>
-      <summary>파일·함수·전달 필드를 단계별로 보기</summary>
-      <ol className="ml-usage-steps">{usage.steps.map((step, index) => <li key={step.title}>
-        <span className="ml-usage-step-number">{String(index + 1).padStart(2, '0')}</span>
-        <div><h4>{step.title}</h4><code>{step.file}</code><code>{step.function}</code><p>{step.detail}</p><div className="ml-usage-output"><b>전달 결과</b><code>{step.output}</code></div></div>
-      </li>)}</ol>
-    </details>
-    <details className="ml-usage-details"><summary>발표용 호출 트리 보기</summary><pre>{usage.tree}</pre></details>
-    <div className="ml-usage-example"><strong>해석 예시 · 실제 지역 사실과 구분</strong><p>{usage.example}</p></div>
-    <p className="ml-usage-limit">{usage.limit}</p>
-  </section>
-}
-
-/** 모델 메타데이터 한 항목을 데이터·함수·기법·평가·결과 순서로 설명합니다. */
+/** 모든 예측 지표에 동일한 데이터·모델·평가·결과 구성을 적용합니다. */
 function LearningModuleCard({ module, index }) {
   const chartData = module.forecast.map((point) => ({
     month: point.month,
@@ -163,10 +99,6 @@ function LearningModuleCard({ module, index }) {
             <strong>{module.model_name}</strong>
             <p>{module.model_explanation}</p>
           </section>
-          <section>
-            <h3><Code2 size={15} />입력 Feature</h3>
-            <div className="ml-feature-list">{module.input_features.map((feature) => <code key={feature}>{FEATURE_LABELS[feature] || feature}</code>)}</div>
-          </section>
         </div>
 
         <section className="ml-module-chart" aria-label={`${module.title} 차트`}>
@@ -185,33 +117,22 @@ function LearningModuleCard({ module, index }) {
         </section>
       </div>
 
-      <div className="ml-module-detail-grid">
-        <section>
-          <h3>사용 함수</h3>
-          <dl>{module.functions.map((name) => <div key={name}><dt><code>{name}</code></dt><dd>{FUNCTION_DESCRIPTIONS[name] || '이 예측 모듈에서 사용하는 처리 함수입니다.'}</dd></div>)}</dl>
-        </section>
-        <section>
-          <h3>사용 기법</h3>
-          <ul>{module.techniques.map((technique) => <li key={technique}>{technique}</li>)}</ul>
-        </section>
-        <section>
-          <h3>평가 결과</h3>
-          <div className="ml-score-grid">
-            <span><small>Test MAE</small><b>{formatValue(evaluation.test_mae, module.unit)}</b></span>
-            <span><small>Test MAPE</small><b>{formatPercent(evaluation.test_mape_percent)}</b></span>
-            <span><small>기준 MAPE</small><b>{formatPercent(evaluation.baseline_test_mape_percent)}</b></span>
-          </div>
-          <p className={evaluation.beats_baseline_on_test ? 'is-positive' : ''}>
-            {baselineSelected
-              ? 'Validation에서 복잡한 후보보다 전년 동월 기준모델이 안정적이어서 기준모델을 선택했습니다.'
-              : evaluation.beats_baseline_on_test
-                ? '최종 Test에서도 선택 모델의 오차가 기준모델보다 낮았습니다.'
-                : '최종 Test에서는 기준모델보다 개선되지 않았으므로 성능 우수성을 주장하지 않습니다.'}
-          </p>
-        </section>
-      </div>
+      <section className="ml-module-evaluation">
+        <h3>평가 결과</h3>
+        <div className="ml-score-grid">
+          <span><small>Test MAE</small><b>{formatValue(evaluation.test_mae, module.unit)}</b></span>
+          <span><small>Test MAPE</small><b>{formatPercent(evaluation.test_mape_percent)}</b></span>
+          <span><small>기준 MAPE</small><b>{formatPercent(evaluation.baseline_test_mape_percent)}</b></span>
+        </div>
+        <p className={evaluation.beats_baseline_on_test ? 'is-positive' : ''}>
+          {baselineSelected
+            ? 'Validation에서 전년 동월 기준모델을 선택했습니다.'
+            : evaluation.beats_baseline_on_test
+              ? '최종 Test에서 선택 모델의 오차가 기준모델보다 낮았습니다.'
+              : '최종 Test에서 기준모델보다 개선되지 않았습니다.'}
+        </p>
+      </section>
       <footer><CheckCircle2 size={17} /><div><b>그래서 얻은 답</b><p>{module.conclusion}</p></div></footer>
-      <ModuleStrategyUsage module={module} />
     </article>
   )
 }
@@ -274,47 +195,50 @@ function MlChatPanel({ region }) {
   </aside>
 }
 
-/** 선생님 구조도처럼 오프라인 학습과 웹 요청 시 온라인 추론을 분리해 보여줍니다. */
-function MlTrainingArchitecture() {
-  const offline = [
-    [Database, '공식 데이터', 'data/raw'],
-    [BarChart3, '전처리·EDA', 'Pandas'],
-    [Cpu, '시간순 학습', 'scikit-learn'],
-    [CheckCircle2, '기준선 평가', 'MAE·RMSE·MAPE'],
-    [HardDrive, '모델 저장', 'Joblib'],
-  ]
-  const online = [
-    [Monitor, '지역 선택', 'React'],
-    [Server, '예측 요청', '/ai'],
-    [BrainCircuit, '저장 모델 추론', '재학습 안 함'],
-    [Sparkles, '화면·기획 근거', '예측값 전달'],
-  ]
-  const renderLane = (items) => items.map(([Icon, title, detail], index) => <div className="ml-architecture-step" key={title}><article><Icon size={17} /><b>{title}</b><span>{detail}</span></article>{index < items.length - 1 && <ArrowRight size={15} />}</div>)
-  return <section className="ml-architecture"><header><div><h2>학습과 예측은 분리됩니다</h2><p>웹페이지를 열 때마다 모델을 다시 학습하지 않습니다.</p></div><em>TRAINING ≠ PREDICTION</em></header><div><section><b>오프라인 · 개발자가 실행</b><div>{renderLane(offline)}</div></section><section><b>온라인 · 사용자가 요청</b><div>{renderLane(online)}</div></section></div></section>
-}
-
 /** 등록된 지역·모델 결과를 API에서 받아 자동으로 늘어나는 학습 전용 페이지입니다. */
 export default function MlTestPage() {
-  const [catalog, setCatalog] = useState(null)
+  const [regionOptions, setRegionOptions] = useState([])
+  const [region, setRegion] = useState(null)
   const [selectedCode, setSelectedCode] = useState('')
+  const [loadingOptions, setLoadingOptions] = useState(true)
+  const [loadingRegion, setLoadingRegion] = useState(false)
   const [error, setError] = useState('')
+  const regionCache = useRef(new Map())
 
   useEffect(() => {
-    let active = true
-    getMlLearningCatalog()
+    const controller = new AbortController()
+    getMlLearningRegions(controller.signal)
       .then((data) => {
-        if (!active) return
-        setCatalog(data)
-        setSelectedCode(data.regions?.find((region) => region.status === 'available')?.region_code || data.regions?.[0]?.region_code || '')
+        setRegionOptions(data.regions || [])
+        setSelectedCode(data.regions?.[0]?.region_code || '')
       })
-      .catch((reason) => { if (active) setError(reason.message) })
-    return () => { active = false }
+      .catch((reason) => { if (reason.name !== 'AbortError') setError(reason.message) })
+      .finally(() => { if (!controller.signal.aborted) setLoadingOptions(false) })
+    return () => controller.abort()
   }, [])
 
-  const region = useMemo(
-    () => catalog?.regions?.find((item) => item.region_code === selectedCode),
-    [catalog, selectedCode],
-  )
+  useEffect(() => {
+    if (!selectedCode) return undefined
+    const cached = regionCache.current.get(selectedCode)
+    if (cached) {
+      setRegion(cached)
+      setError('')
+      setLoadingRegion(false)
+      return undefined
+    }
+    const controller = new AbortController()
+    setRegion(null)
+    setError('')
+    setLoadingRegion(true)
+    getMlLearningRegion(selectedCode, controller.signal)
+      .then((data) => {
+        regionCache.current.set(selectedCode, data)
+        setRegion(data)
+      })
+      .catch((reason) => { if (reason.name !== 'AbortError') setError(reason.message) })
+      .finally(() => { if (!controller.signal.aborted) setLoadingRegion(false) })
+    return () => controller.abort()
+  }, [selectedCode])
 
   return (
     <WorkspaceShell>
@@ -322,13 +246,13 @@ export default function MlTestPage() {
         <LearningSectionNav />
         <div className="ml-test-layout"><div className="ml-test-content">
         <header className="ml-test-hero">
-          <div><p>STUDY PAGE</p><h1>머신러닝 결과</h1><span>현재 서비스가 어떤 데이터를 학습하고, 어떤 함수와 기법으로 결과를 만드는지 확인합니다.</span></div>
-          {catalog?.regions?.length > 0 && <label>분석 지역<select value={selectedCode} onChange={(event) => setSelectedCode(event.target.value)}>
-            {catalog.regions.map((item) => <option key={item.region_code} value={item.region_code}>{item.region_name}{item.status !== 'available' ? ' · 준비 중' : ''}</option>)}
+          <div><p>STUDY PAGE</p><h1>머신러닝 결과</h1><span>지역별 3개월 예측과 모델 평가를 확인합니다.</span></div>
+          {regionOptions.length > 0 && <label>분석 지역<select value={selectedCode} onChange={(event) => setSelectedCode(event.target.value)}>
+            {regionOptions.map((item) => <option key={item.region_code} value={item.region_code}>{item.region_name}</option>)}
           </select></label>}
         </header>
 
-        {!catalog && !error && <div className="ml-test-state">머신러닝 학습 정보를 불러오고 있습니다.</div>}
+        {(loadingOptions || loadingRegion) && !error && <div className="ml-test-state">{loadingOptions ? '분석 지역 목록을 불러오고 있습니다.' : '선택 지역의 예측 결과를 불러오고 있습니다.'}</div>}
         {error && <div className="ml-test-state is-error"><AlertCircle size={18} />{error}</div>}
         {region?.status === 'unavailable' && <div className="ml-test-state is-error"><AlertCircle size={18} />{region.reason}</div>}
 
@@ -338,15 +262,6 @@ export default function MlTestPage() {
             <div><small>원자료 기간</small><b>{region.source_period}</b><span>{region.observation_count}개월</span></div>
             <div><small>데이터 분리</small><b>Train → Validation → Test</b><span>{region.train_period} / {region.validation_period} / {region.test_period}</span></div>
             <div><small>현재 결과 모듈</small><b>{region.modules.length}개</b><span>{region.model_version}</span></div>
-          </section>
-
-          <MlTrainingArchitecture />
-
-          <section className="ml-pipeline">
-            <h2>전체 처리 흐름</h2>
-            <ol>
-              {['공식 ZIP 읽기', '데이터 검사', 'Feature·Target 생성', '시간순 학습·선택', '최종 Test', '3개월 예측', 'AI 기획 근거 전달'].map((step, index) => <li key={step}><i>{index + 1}</i><span>{step}</span></li>)}
-            </ol>
           </section>
 
           <section className="ml-module-list">
