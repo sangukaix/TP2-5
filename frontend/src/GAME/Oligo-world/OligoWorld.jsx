@@ -14,9 +14,17 @@ import DialogueBox from './components/DialogueBox'
 import GameHud from './components/GameHud'
 import GameViewport from './components/GameViewport'
 import MissionPanel from './components/MissionPanel'
+import DemoLogin from './components/DemoLogin'
+import { createDemoProfileApi } from './demoProfile'
 
 export default function OligoWorld() {
-  const { user, loading: authLoading } = useAuth()
+  const { user: member, loading: memberLoading } = useAuth()
+  const [demoUser, setDemoUser] = useState(null)
+  const [showDemoLogin, setShowDemoLogin] = useState(false)
+  const [demoApi] = useState(createDemoProfileApi)
+  const user = demoUser || member
+  const authLoading = !demoUser && memberLoading
+  const api = demoUser ? demoApi : gameProfileApi
   const [state, dispatch] = useReducer(gameReducer, initialGameState)
   const [profile, setProfile] = useState(null)
   const [profileStatus, setProfileStatus] = useState('loading')
@@ -38,7 +46,7 @@ export default function OligoWorld() {
   useEffect(() => {
     if (authLoading || !user) return undefined
     let active = true
-    gameProfileApi.load().then(saved => {
+    api.load().then(saved => {
       if (!active) return
       setProfile(saved)
       setLoadedMemberId(user.id)
@@ -52,7 +60,7 @@ export default function OligoWorld() {
       }
     })
     return () => { active = false }
-  }, [authLoading, user])
+  }, [authLoading, user, api])
 
   useEffect(() => {
     window.clearTimeout(saveTimer.current)
@@ -62,12 +70,12 @@ export default function OligoWorld() {
       const data = { current_map_id: player.currentMapId,
         position_x: player.position.x, position_y: player.position.y,
         tutorial_stage: state.tutorial.stage, tutorial_valid_moves: state.tutorial.validMoves }
-      const task = inFlight.current.catch(() => {}).then(() => gameProfileApi.saveProgress(data))
+      const task = inFlight.current.catch(() => {}).then(() => api.saveProgress(data))
       inFlight.current = task
       task.then(() => setSaveStatus('saved')).catch(() => setSaveStatus('error'))
     }, 700)
     return () => window.clearTimeout(saveTimer.current)
-  }, [state.phase, player, state.tutorial, profile?.profile_status, loadedMemberId, user?.id])
+  }, [state.phase, player, state.tutorial, profile?.profile_status, loadedMemberId, user?.id, api])
 
   const finishTutorial = useCallback(async () => {
     if (!user || loadedMemberId !== user.id) return
@@ -76,10 +84,10 @@ export default function OligoWorld() {
     setSaveStatus('saving')
     try {
       await inFlight.current.catch(() => {})
-      await gameProfileApi.saveProgress({ current_map_id: 'map001',
+      await api.saveProgress({ current_map_id: 'map001',
         position_x: state.player.position.x, position_y: state.player.position.y,
         tutorial_stage: 'toDoor', tutorial_valid_moves: state.tutorial.validMoves })
-      const saved = await gameProfileApi.completeTutorial()
+      const saved = await api.completeTutorial()
       setProfile(saved)
       dispatch({ type: 'CONFIRM_TUTORIAL_REWARD', profile: saved })
       setClearSaved(true)
@@ -89,7 +97,7 @@ export default function OligoWorld() {
       setSaveStatus('error')
       completionStarted.current = false
     }
-  }, [state.player, state.tutorial, loadedMemberId, user])
+  }, [state.player, state.tutorial, loadedMemberId, user, api])
 
   useEffect(() => {
     if (state.phase !== 'clear') return undefined
@@ -122,7 +130,7 @@ export default function OligoWorld() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [state.phase, dialogue, player, map, profileStatus, loadedMemberId, user?.id])
+  }, [state.phase, dialogue, player, map, profileStatus, loadedMemberId, user?.id, api])
 
   useEffect(() => {
     if (state.phase !== 'clear' || !clearSaved) return undefined
@@ -156,16 +164,19 @@ export default function OligoWorld() {
             <h1 className="oligo-world-title" id="oligo-world-title">OLIGO WORLD</h1>
             <p className="oligo-world-description">모험 기록은 회원 계정에 저장됩니다.<br />
               로그인 후 Oligo World를 시작해주세요.</p>
-            <a className="oligo-world-status" href="/login">로그인</a>
+            {showDemoLogin ? <DemoLogin onCancel={() => setShowDemoLogin(false)}
+              onLogin={() => setDemoUser({ id: 'oligo-demo', username: 'admin', region_code: '' })} /> :
+              <button className="oligo-world-status" type="button"
+                onClick={() => setShowDemoLogin(true)}>로그인</button>}
             <a className="oligo-world-guest-hub" href="/game" onClick={navigateGame}>
               GAME HUB로 돌아가기</a>
           </div>
         </div>
       </section> : <section className="oligo-world-game-shell" aria-label="Oligo World 모험">
         <header className="oligo-world-game-header">
-          <span>OLIGO WORLD</span><strong>CHAPTER 01 · 첫 걸음</strong>
+          <span>OLIGO WORLD{demoUser ? ' · 임시 체험 (새로고침 시 초기화)' : ''}</span><strong>CHAPTER 01 · 첫 걸음</strong>
         </header>
-        {creating ? <CharacterSelect profile={profile} memberRegionCode={user.region_code}
+        {creating ? <CharacterSelect api={api} profile={profile} memberRegionCode={user.region_code}
           onFinalized={saved => {
             setProfile(saved)
             dispatch({ type: 'HYDRATE_PROFILE', profile: saved })

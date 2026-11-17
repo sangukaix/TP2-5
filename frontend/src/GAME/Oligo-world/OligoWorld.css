@@ -252,3 +252,14 @@ body:has(.oligo-world-page){margin:0;}
   .oligo-world-creation-visual .oligo-world-character-sprite{height:240px;}
   .oligo-world-creation-form{gap:12px;}
 }
+
+/* 26.11.17_22:36 */
+.oligo-world-demo-login{display:grid; gap:10px; width:min(100%,360px); box-sizing:border-box;
+  margin:20px auto 0; padding:20px; border:1px solid #aaf2ea; border-radius:16px;
+  background:#102d52; text-align:left; font-size:1.3rem;}
+.oligo-world-demo-login h2{margin:0; color:#fff9ef; font-size:1.8rem;}
+.oligo-world-demo-login p{margin:0; color:#d6eaff; line-height:1.6;}
+.oligo-world-demo-login input{box-sizing:border-box; width:100%; min-height:40px; padding:8px;
+  border:1px solid #86e9eb; border-radius:8px; color:#fff; background:#193a59; font:inherit;}
+.oligo-world-demo-login input:focus-visible{outline:2px solid #f2c78f; outline-offset:2px;}
+.oligo-world-demo-login .oligo-world-status{margin:0;}

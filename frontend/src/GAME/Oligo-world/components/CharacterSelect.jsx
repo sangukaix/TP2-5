@@ -8,7 +8,7 @@ import { gameProfileApi } from '../gameProfileApi'
 import { travelStyles } from '../travelStyles'
 import CharacterSprite from './CharacterSprite'
 
-export default function CharacterSelect({ profile, memberRegionCode, onFinalized }) {
+export default function CharacterSelect({ profile, memberRegionCode, onFinalized, api = gameProfileApi }) {
   const initialRegion = profile?.region_code || memberRegionCode || ''
   const [form, setForm] = useState({
     characterId: profile?.character_id || characterIds[0],
@@ -49,7 +49,7 @@ export default function CharacterSelect({ profile, memberRegionCode, onFinalized
       const data = { character_id: form.characterId,
         game_nickname: nickname || null, region_code: form.regionCode || null,
         travel_style: form.travelStyle || null }
-      const task = inFlight.current.catch(() => {}).then(() => gameProfileApi.saveDraft(data))
+      const task = inFlight.current.catch(() => {}).then(() => api.saveDraft(data))
       inFlight.current = task
       task.then(() => { if (mounted.current && version === saveVersion.current) setSaveStatus('saved') })
         .catch((failure) => {
@@ -60,7 +60,7 @@ export default function CharacterSelect({ profile, memberRegionCode, onFinalized
         })
     }, 800)
     return () => window.clearTimeout(saveTimer.current)
-  }, [form.characterId, form.nickname, form.regionCode, form.travelStyle, finalizing])
+  }, [form.characterId, form.nickname, form.regionCode, form.travelStyle, finalizing, api])
 
   useEffect(() => {
     function onKeyDown(event) {
@@ -88,7 +88,7 @@ export default function CharacterSelect({ profile, memberRegionCode, onFinalized
     window.clearTimeout(saveTimer.current)
     try {
       await inFlight.current.catch(() => {})
-      const active = await gameProfileApi.finalize({ character_id: form.characterId,
+      const active = await api.finalize({ character_id: form.characterId,
         game_nickname: form.nickname.trim(), region_code: form.regionCode,
         travel_style: form.travelStyle })
       onFinalized(active)

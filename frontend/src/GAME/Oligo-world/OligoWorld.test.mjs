@@ -15,7 +15,7 @@ test('anonymous Oligo World asks for member login while keeping the mini game', 
     }, createElement(OligoWorld)))
     assert.match(html, /OLIGO WORLD/)
     assert.match(html, /모험 기록은 회원 계정에 저장됩니다/)
-    assert.match(html, /href="\/login"/)
+    assert.match(html, /type="button">로그인<\/button>/)
     assert.match(html, /href="\/game\/ladder"[^>]*>.*점심메뉴 사다리타기/s)
   } finally {
     await vite.close()
