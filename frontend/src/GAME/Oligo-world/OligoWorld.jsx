@@ -17,6 +17,7 @@ import GameHud from './components/GameHud'
 import GameViewport from './components/GameViewport'
 import MissionPanel from './components/MissionPanel'
 import DemoLogin from './components/DemoLogin'
+import Prologue from './components/Prologue'
 import { createDemoProfileApi } from './demoProfile'
 
 export default function OligoWorld() {
@@ -155,11 +156,10 @@ function WorldSession({ member, memberLoading }) {
   const currentProfile = loadedMemberId === user?.id && profileStatus === 'ready'
   const creating = currentProfile && profile?.profile_status !== 'ACTIVE'
   const playing = currentProfile && profile?.profile_status === 'ACTIVE'
+  const enterDemoTutorial = useCallback(() => dispatch({ type: 'SKIP_DEMO_PROLOGUE' }), [])
 
   if (playing && state.phase === 'demoPrologue') {
-    return <main className="oligo-world-prologue" aria-label="프롤로그">
-      <button type="button" autoFocus onClick={() => dispatch({ type: 'SKIP_DEMO_PROLOGUE' })}>SKIP</button>
-    </main>
+    return <Prologue onComplete={enterDemoTutorial} />
   }
 
   return (
@@ -203,7 +203,7 @@ function WorldSession({ member, memberLoading }) {
             <GameHud character={character} player={player} map={map} nickname={profile.game_nickname} />
             <p>{profile.region_name || '지역 미선택'} · {travelStyles
               .filter(style => profile.travel_styles.includes(style.id)).map(style => style.label).join(', ')}</p>
-            <OpeningScene characterId={player.characterId} background={map.background} />
+            <OpeningScene characterId={player.characterId} />
           </section> : playing && player && map && <>
           <GameHud character={character} player={player} map={map} nickname={profile.game_nickname} />
           <div className="oligo-world-play-layout">

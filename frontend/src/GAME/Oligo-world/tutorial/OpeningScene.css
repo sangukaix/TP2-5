@@ -1,4 +1,7 @@
 .oligo-opening {
+  width: min(100%, max(540px, 108svh));
+  box-sizing: border-box;
+  margin-inline: auto;
   overflow: hidden;
   border: 1px solid #82765f;
   border-radius: 10px;
@@ -6,55 +9,42 @@
   background: #111e32;
 }
 
-.oligo-opening-stage {
-  position: relative;
-  overflow: hidden;
-  aspect-ratio: 2.9;
-  max-height: 50svh;
-  background: #503923;
-}
-
-/* Keep the bed, actors and effects on the same Home.png coordinates at every width. */
+/* Scene anchors are percentages of the uncropped Home1.png. */
 .oligo-opening-room {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 145%;
-  aspect-ratio: 1672 / 941;
-  transform: translate(-50%, -39%);
+  --sleep-x: 23.4%;
+  --sleep-y: 40.3%;
+  --sleep-angle: 57deg;
+  --wake-x: 33.7%;
+  --wake-y: 68.7%;
+  position: relative;
+  container-type: inline-size;
+  aspect-ratio: 1671 / 941;
+  background-color: #503923;
   background-size: 100% 100%;
 }
-
-.oligo-opening-guide, .oligo-opening-player, .oligo-opening-bolt, .oligo-opening-arrow {
-  position: absolute;
+.oligo-opening-room[data-character="toki"] {
+  --sleep-x: 26.1%;
+  --sleep-y: 37.8%;
+  --sleep-angle: 36deg;
+  --foot-offset: -93%;
 }
-.oligo-opening-guide {
-  left: 39%; top: 54%; width: 21%;
-  transform: translate(-50%, -100%);
-}
-.oligo-opening-guide img, .oligo-opening-player img {
+.oligo-opening-player, .oligo-opening-zzz, .oligo-opening-bolt, .oligo-opening-arrow { position: absolute; }
+.oligo-opening-player img {
   display: block; width: 100%;
   filter: drop-shadow(0 3px 3px #41281185);
 }
 .oligo-opening-player.is-asleep {
-  left: 53.5%; top: 31.4%; width: 8.8%;
-  transform: translate(-50%, -50%);
-}
-.oligo-opening-player.is-asleep img {
-  transform: rotate(-78deg) scaleX(.78);
-}
-.oligo-opening-quilt {
-  position: absolute; inset: 0; background: inherit;
-  clip-path: polygon(51.6% 32.1%, 54.3% 30%, 57.5% 29%, 61.8% 29.4%, 61.8% 39%, 51.6% 36.2%);
+  left: var(--sleep-x); top: var(--sleep-y); width: 11%;
+  transform: translate(-50%, -50%) rotate(var(--sleep-angle));
 }
 .oligo-opening-zzz {
-  position: absolute; left: -25%; top: 0;
-  color: white; font: italic 800 clamp(14px, 2vw, 28px) Georgia, serif;
+  left: 29.5%; top: 23.5%;
+  color: white; font: italic 800 clamp(12px, 2.2cqw, 27px) Georgia, serif;
   text-shadow: 0 1px 4px #332745, 1px 0 2px #332745;
 }
 .oligo-opening-player.is-awake {
-  left: 55%; top: 51%; width: 9%;
-  transform: translate(-50%, -100%);
+  left: var(--wake-x); top: var(--wake-y); width: 11%;
+  transform: translate(-50%, var(--foot-offset, -100%));
 }
 .oligo-opening-player.is-awake img { animation: oligo-opening-jolt 380ms ease-out both; }
 @keyframes oligo-opening-jolt {
@@ -62,56 +52,102 @@
   65% { transform: translateY(2%) rotate(-3deg); }
 }
 
-.oligo-opening-guide.is-charging img {
-  filter: drop-shadow(0 0 4px #edfaff) drop-shadow(0 0 10px #179cff);
+.oligo-opening-bolt {
+  left: calc(var(--sleep-x) - 1.3%);
+  top: 3%;
+  width: 11%;
+  bottom: calc(100% - var(--sleep-y));
+  filter: drop-shadow(0 0 3px #008aff) drop-shadow(0 0 9px #68daff);
+  transform-origin: top;
+  animation: oligo-opening-strike 480ms ease-out both;
 }
-.oligo-opening-aura {
-  position: absolute; inset: 0 10%; border: 2px solid #a2edff;
-  border-radius: 50%; transform: rotate(-15deg);
-  box-shadow: inset 0 0 14px #229eff, 0 0 16px #229eff;
-  animation: oligo-opening-charge .65s ease-out both;
-}
-.oligo-opening-aura::before, .oligo-opening-aura::after, .oligo-opening-bolt::before {
+.oligo-opening-bolt::before {
   content: ''; display: block; height: 100%; background: #ebfbff;
   clip-path: polygon(79% 0, 24% 51%, 48% 54%, 12% 100%, 84% 40%, 57% 38%);
 }
-.oligo-opening-aura::before, .oligo-opening-aura::after {
-  position: absolute; width: 18%; height: 48%; background: #9af1ff;
-}
-.oligo-opening-aura::before { left: 0; top: 26%; }
-.oligo-opening-aura::after { right: 0; top: 8%; }
-@keyframes oligo-opening-charge {
-  from { opacity: .35; transform: rotate(-30deg) scale(.8); }
-}
-.oligo-opening-bolt {
-  left: 50.8%; bottom: 68.6%; width: 9%; height: 26%;
-  filter: drop-shadow(0 0 3px #008aff) drop-shadow(0 0 9px #68daff);
-  animation: oligo-opening-strike .48s ease-out both;
-}
 @keyframes oligo-opening-strike {
-  0%, 45% { opacity: 1; }
+  0% { transform: scaleY(.08); opacity: 1; }
+  23%, 45% { transform: scaleY(1); opacity: 1; }
   100% { opacity: 0; }
 }
 .oligo-opening-arrow {
-  left: 60.5%; top: 40%;
-  color: #c3fff7; font: 900 clamp(25px, 4.8vw, 58px)/1 sans-serif;
+  left: calc(var(--wake-x) + 6%); top: calc(var(--wake-y) - 11%);
+  transform: translateY(-50%);
+  color: #c3fff7; font: 900 clamp(17px, 4.8cqw, 58px)/1 sans-serif;
   text-shadow: 0 2px 1px #102d40, 0 0 8px #0d615d;
 }
 
 .oligo-opening-message {
-  display: grid; grid-template-columns: clamp(72px, 10vw, 124px) 1fr;
+  display: grid; grid-template-columns: clamp(88px, 14vw, 148px) minmax(0, 1fr);
   border-top: 2px solid #d7b376;
   background: linear-gradient(105deg, #192f47, #101c2c);
 }
 .oligo-opening-portrait {
-  position: relative; overflow: hidden; border-right: 1px solid #8c795b;
+  display: flex;
+  align-items: flex-end;
+  border-right: 1px solid #8c795b;
   background: radial-gradient(ellipse at 50% 80%, #57717c, #28384b);
 }
-.oligo-opening-portrait img {
-  position: absolute; left: 50%; top: 4%; height: 240%; width: auto; max-width: none;
-  transform: translateX(-50%);
+.oligo-opening-portrait-art {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: 130px;
 }
-.oligo-opening-copy { display: grid; align-content: space-between; gap: 12px; padding: 16px 20px 12px; }
+.oligo-opening-portrait img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: contain; object-position: center bottom;
+}
+.oligo-opening-aura {
+  position: absolute;
+  inset: -7% -4% 0 0;
+  pointer-events: none;
+  filter: drop-shadow(0 0 3px #00d9ff) drop-shadow(0 0 7px #007cff);
+}
+.oligo-opening-aura::before {
+  content: '';
+  position: absolute;
+  inset: 10% 4%;
+  border: 2px solid #60caff;
+  border-radius: 50%;
+  box-shadow: 0 0 13px #369bff, inset 0 0 11px #369bff;
+  animation: oligo-opening-charge 740ms ease-in-out infinite alternate;
+}
+.oligo-opening-aura i {
+  position: absolute;
+  left: var(--arc-x);
+  top: var(--arc-y);
+  width: 55%;
+  height: 24%;
+  transform: rotate(var(--arc-angle));
+}
+.oligo-opening-aura i::before {
+  content: '';
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #18a4ff, #e7fbff 45%, #72ddff 68%, #168aff);
+  clip-path: polygon(0 63%, 22% 26%, 34% 46%, 49% 3%, 65% 40%, 83% 27%, 100% 68%, 82% 42%, 63% 58%, 49% 22%, 35% 65%, 21% 42%);
+  animation: oligo-opening-spark 390ms var(--arc-delay) steps(1) infinite;
+}
+.oligo-opening-aura i:nth-child(1) { --arc-x: 18%; --arc-y: 1%; --arc-angle: -13deg; --arc-delay: 0ms; }
+.oligo-opening-aura i:nth-child(2) { --arc-x: 51%; --arc-y: 31%; --arc-angle: 72deg; --arc-delay: -90ms; }
+.oligo-opening-aura i:nth-child(3) { --arc-x: 27%; --arc-y: 77%; --arc-angle: 14deg; --arc-delay: -210ms; }
+.oligo-opening-aura i:nth-child(4) { --arc-x: -8%; --arc-y: 53%; --arc-angle: -71deg; --arc-delay: -295ms; }
+@keyframes oligo-opening-charge {
+  from { opacity: .52; transform: scale(.91); }
+  to { opacity: .9; transform: scale(1.05); }
+}
+@keyframes oligo-opening-spark {
+  0% { transform: translateY(-10%); }
+  25% { transform: scaleY(-1) translateX(6%); }
+  50% { transform: translate(-7%, 19%) scaleX(.83); opacity: .65; }
+  75% { transform: scaleY(-.75) translateX(-5%); }
+}
+.oligo-opening-copy {
+  position: relative;
+  display: grid; align-content: space-between; gap: 12px; padding: 16px 20px 12px;
+}
 .oligo-opening-copy p {
   margin: 0; font-size: clamp(15px, 1.65vw, 22px); line-height: 1.55; word-break: keep-all;
 }
@@ -128,10 +164,11 @@
   background: #1a3645; color: #dcfffa; font: inherit;
 }
 @media (max-width: 600px) {
-  .oligo-opening-stage { aspect-ratio: 1.48; }
-  .oligo-opening-room { width: 225%; }
   .oligo-opening-copy { padding: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .oligo-opening-player.is-awake img, .oligo-opening-aura, .oligo-opening-bolt { animation: none; }
+  .oligo-opening-player.is-awake img,
+  .oligo-opening-aura::before,
+  .oligo-opening-aura i::before,
+  .oligo-opening-bolt { animation: none; }
 }

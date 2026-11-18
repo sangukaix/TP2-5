@@ -613,3 +613,7 @@ D-175: PPT `pptx-v36-operating-capacity`, Word `strategy-docx-v13-operating-capa
 오류는 `detail: {code, message}`를 사용한다. 중복 아이디/이메일 409,
 잘못된 로그인 401, 지역 오류 422, Origin 오류 403, DB/설정 오류 503이다.
 정확한 요청 필드와 검증은 FastAPI `/docs`의 Pydantic Schema를 따른다.
+
+## Oligo World 체험 튜토리얼 (D-229)
+
+첫 장면의 대사, 전기·번개 연출, 기상과 이동 안내는 브라우저 상태로 진행한다. 이 흐름에는 게임 API 호출이나 서버 진행 기록이 없다.
