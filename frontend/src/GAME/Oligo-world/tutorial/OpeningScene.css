@@ -1,0 +1,137 @@
+.oligo-opening {
+  overflow: hidden;
+  border: 1px solid #82765f;
+  border-radius: 10px;
+  color: #fff8ea;
+  background: #111e32;
+}
+
+.oligo-opening-stage {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 2.9;
+  max-height: 50svh;
+  background: #503923;
+}
+
+/* Keep the bed, actors and effects on the same Home.png coordinates at every width. */
+.oligo-opening-room {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 145%;
+  aspect-ratio: 1672 / 941;
+  transform: translate(-50%, -39%);
+  background-size: 100% 100%;
+}
+
+.oligo-opening-guide, .oligo-opening-player, .oligo-opening-bolt, .oligo-opening-arrow {
+  position: absolute;
+}
+.oligo-opening-guide {
+  left: 39%; top: 54%; width: 21%;
+  transform: translate(-50%, -100%);
+}
+.oligo-opening-guide img, .oligo-opening-player img {
+  display: block; width: 100%;
+  filter: drop-shadow(0 3px 3px #41281185);
+}
+.oligo-opening-player.is-asleep {
+  left: 53.5%; top: 31.4%; width: 8.8%;
+  transform: translate(-50%, -50%);
+}
+.oligo-opening-player.is-asleep img {
+  transform: rotate(-78deg) scaleX(.78);
+}
+.oligo-opening-quilt {
+  position: absolute; inset: 0; background: inherit;
+  clip-path: polygon(51.6% 32.1%, 54.3% 30%, 57.5% 29%, 61.8% 29.4%, 61.8% 39%, 51.6% 36.2%);
+}
+.oligo-opening-zzz {
+  position: absolute; left: -25%; top: 0;
+  color: white; font: italic 800 clamp(14px, 2vw, 28px) Georgia, serif;
+  text-shadow: 0 1px 4px #332745, 1px 0 2px #332745;
+}
+.oligo-opening-player.is-awake {
+  left: 55%; top: 51%; width: 9%;
+  transform: translate(-50%, -100%);
+}
+.oligo-opening-player.is-awake img { animation: oligo-opening-jolt 380ms ease-out both; }
+@keyframes oligo-opening-jolt {
+  0% { transform: translateY(-12%) rotate(6deg); filter: brightness(1.65) drop-shadow(0 0 8px #99edff); }
+  65% { transform: translateY(2%) rotate(-3deg); }
+}
+
+.oligo-opening-guide.is-charging img {
+  filter: drop-shadow(0 0 4px #edfaff) drop-shadow(0 0 10px #179cff);
+}
+.oligo-opening-aura {
+  position: absolute; inset: 0 10%; border: 2px solid #a2edff;
+  border-radius: 50%; transform: rotate(-15deg);
+  box-shadow: inset 0 0 14px #229eff, 0 0 16px #229eff;
+  animation: oligo-opening-charge .65s ease-out both;
+}
+.oligo-opening-aura::before, .oligo-opening-aura::after, .oligo-opening-bolt::before {
+  content: ''; display: block; height: 100%; background: #ebfbff;
+  clip-path: polygon(79% 0, 24% 51%, 48% 54%, 12% 100%, 84% 40%, 57% 38%);
+}
+.oligo-opening-aura::before, .oligo-opening-aura::after {
+  position: absolute; width: 18%; height: 48%; background: #9af1ff;
+}
+.oligo-opening-aura::before { left: 0; top: 26%; }
+.oligo-opening-aura::after { right: 0; top: 8%; }
+@keyframes oligo-opening-charge {
+  from { opacity: .35; transform: rotate(-30deg) scale(.8); }
+}
+.oligo-opening-bolt {
+  left: 50.8%; bottom: 68.6%; width: 9%; height: 26%;
+  filter: drop-shadow(0 0 3px #008aff) drop-shadow(0 0 9px #68daff);
+  animation: oligo-opening-strike .48s ease-out both;
+}
+@keyframes oligo-opening-strike {
+  0%, 45% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.oligo-opening-arrow {
+  left: 60.5%; top: 40%;
+  color: #c3fff7; font: 900 clamp(25px, 4.8vw, 58px)/1 sans-serif;
+  text-shadow: 0 2px 1px #102d40, 0 0 8px #0d615d;
+}
+
+.oligo-opening-message {
+  display: grid; grid-template-columns: clamp(72px, 10vw, 124px) 1fr;
+  border-top: 2px solid #d7b376;
+  background: linear-gradient(105deg, #192f47, #101c2c);
+}
+.oligo-opening-portrait {
+  position: relative; overflow: hidden; border-right: 1px solid #8c795b;
+  background: radial-gradient(ellipse at 50% 80%, #57717c, #28384b);
+}
+.oligo-opening-portrait img {
+  position: absolute; left: 50%; top: 4%; height: 240%; width: auto; max-width: none;
+  transform: translateX(-50%);
+}
+.oligo-opening-copy { display: grid; align-content: space-between; gap: 12px; padding: 16px 20px 12px; }
+.oligo-opening-copy p {
+  margin: 0; font-size: clamp(15px, 1.65vw, 22px); line-height: 1.55; word-break: keep-all;
+}
+.oligo-opening-copy strong { color: #ffda9a; }
+.oligo-opening-next, .oligo-opening-keys {
+  display: inline-flex; gap: 7px; align-items: center; justify-self: end;
+  color: #b4ddd9; font: inherit; font-size: 13px;
+}
+.oligo-opening-next { padding: 4px; border: 0; background: none; cursor: pointer; }
+.oligo-opening-next:disabled { visibility: hidden; }
+.oligo-opening-next:focus-visible { outline: 2px solid #aaf2ea; outline-offset: 2px; }
+.oligo-opening-copy kbd {
+  padding: 2px 7px; border: 1px solid #83b7b5; border-bottom-width: 2px; border-radius: 4px;
+  background: #1a3645; color: #dcfffa; font: inherit;
+}
+@media (max-width: 600px) {
+  .oligo-opening-stage { aspect-ratio: 1.48; }
+  .oligo-opening-room { width: 225%; }
+  .oligo-opening-copy { padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .oligo-opening-player.is-awake img, .oligo-opening-aura, .oligo-opening-bolt { animation: none; }
+}

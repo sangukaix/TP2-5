@@ -39,6 +39,13 @@
 
 /* 26.09.25_10:01 */
 body:has(.oligo-world-page){margin:0;}
+body:has(.oligo-world-prologue){margin:0; background:#000;}
+.oligo-world-prologue{position:fixed; inset:0; display:grid; align-items:end; justify-items:end;
+  padding:clamp(20px,5vw,64px); background:#000;}
+.oligo-world-prologue button{min-height:44px; padding:8px 20px; border:1px solid #aaa;
+  border-radius:6px; color:#fff; background:#000; font:inherit; font-weight:700; letter-spacing:.12em; cursor:pointer;}
+.oligo-world-prologue button:focus-visible{outline:2px solid white; outline-offset:4px;}
+.oligo-world-demo-tutorial h1{margin:16px 0; color:#fff9ef;}
 
 /* 26.09.25_10:23 */
 .oligo-world-stage{display:grid; min-height:clamp(440px,48vw,660px); align-items:start;

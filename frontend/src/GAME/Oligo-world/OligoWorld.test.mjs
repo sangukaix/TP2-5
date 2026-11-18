@@ -42,6 +42,26 @@ test('character creation shows one carousel character and a disabled incomplete 
   }
 })
 
+test('only the demo can submit a valid nickname and styles without a region', async () => {
+  const vite = await createServer({ server: { middlewareMode: true },
+    appType: 'custom', logLevel: 'silent' })
+  try {
+    const { default: CharacterSelect } = await vite.ssrLoadModule(
+      '/src/GAME/Oligo-world/components/CharacterSelect.jsx')
+    function disabled(demo, nickname, styles) {
+      const html = renderToStaticMarkup(createElement(CharacterSelect, { demo,
+        profile: { game_nickname: nickname, travel_styles: styles, travel_style: styles[0] } }))
+      return /type="submit" disabled=""/.test(html)
+    }
+    assert.equal(disabled(true, '토끼', ['ocean', 'forest']), false)
+    assert.equal(disabled(true, '   ', ['forest']), true)
+    assert.equal(disabled(true, '토끼', []), true)
+    assert.equal(disabled(false, '토끼', ['forest']), true)
+  } finally {
+    await vite.close()
+  }
+})
+
 test('draft values, carousel order, region reset and nickname validation', async () => {
   const vite = await createServer({ server: { middlewareMode: true },
     appType: 'custom', logLevel: 'silent' })
@@ -58,6 +78,7 @@ test('draft values, carousel order, region reset and nickname validation', async
       { sidoCode: '28', regionCode: '' })
     assert.equal(validCreationNickname('관악산호랑이'), true)
     assert.equal(validCreationNickname('한'), false)
+    assert.equal(validCreationNickname('   '), false)
     assert.equal(validCreationNickname('has spaces'), false)
     assert.equal(validCreationNickname('a'.repeat(17)), false)
     const html = renderToStaticMarkup(createElement(CharacterSelect, {
@@ -68,6 +89,23 @@ test('draft values, carousel order, region reset and nickname validation', async
     assert.match(html, /Hochi 캐릭터/)
     assert.match(html, /value="관악산호랑이"/)
     assert.match(html, /class="oligo-world-style-chip oligo-world-style-chip--active"[^>]*>숲/)
+  } finally {
+    await vite.close()
+  }
+})
+
+test('each new opening starts with the selected sleeper and Oligo speaking', async () => {
+  const vite = await createServer({ server: { middlewareMode: true },
+    appType: 'custom', logLevel: 'silent' })
+  try {
+    const { default: OpeningScene } = await vite.ssrLoadModule('/src/GAME/Oligo-world/tutorial/OpeningScene.jsx')
+    for (const [characterId, name] of Object.entries({ toki: '토키', hochi: '호치', miho: '미호' })) {
+      const html = renderToStaticMarkup(createElement(OpeningScene, { characterId, background: 'home.png' }))
+      assert.ok(html.includes(`침대에 누워 자는 ${name}`))
+      assert.match(html, /올리고 초상화/)
+      assert.match(html, /안녕하세요, 올리고 월드에 오신 걸 환영합니다!/)
+      assert.doesNotMatch(html, /oligo-opening-(aura|bolt|keys)/)
+    }
   } finally {
     await vite.close()
   }

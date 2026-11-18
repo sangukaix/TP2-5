@@ -56,6 +56,12 @@ function grantTutorialReward(state, nextMapId) {
 }
 
 export function gameReducer(state, action) {
+  if (action.type === 'START_DEMO_PROLOGUE') {
+    return { ...initialGameState, phase: 'demoPrologue', selectedCharacterId: action.characterId }
+  }
+  if (action.type === 'SKIP_DEMO_PROLOGUE' && state.phase === 'demoPrologue') {
+    return { ...state, phase: 'demoTutorial', player: createInitialPlayer(state.selectedCharacterId) }
+  }
   if (action.type === 'HYDRATE_PROFILE') return stateFromProfile(action.profile)
   if (action.type === 'CONFIRM_TUTORIAL_REWARD' && state.phase === 'clear' &&
       action.profile?.tutorial_reward_granted) {

@@ -49,6 +49,32 @@ test('pure reducer selection creates the chosen level-one player', async () => {
   }
 })
 
+test('demo prologue and tutorial discard prior progress and ignore legacy tutorial events', async () => {
+  const { vite, gameReducer, stateFromProfile, getMap } = await loadGame()
+  try {
+    const old = stateFromProfile({ profile_status: 'ACTIVE', character_id: 'toki',
+      current_map_id: 'map002', level: 3, exp: 60, currency_w: 80,
+      position_x: 1, position_y: 4, tutorial_stage: 'complete',
+      tutorial_valid_moves: 4, tutorial_reward_granted: true })
+    const prologue = gameReducer(old, { type: 'START_DEMO_PROLOGUE', characterId: 'miho' })
+    assert.equal(prologue.phase, 'demoPrologue')
+    const start = gameReducer(prologue, { type: 'SKIP_DEMO_PROLOGUE' })
+    assert.equal(start.phase, 'demoTutorial')
+    assert.equal(start.tutorial, null)
+    assert.equal(start.pendingMapId, null)
+    assert.deepEqual(start.visitedMaps, [])
+    assert.deepEqual(start.player, { characterId: 'miho', level: 1, exp: 0, currencyW: 0,
+      currentMapId: 'map001', position: getMap('map001').spawn })
+    for (const state of [prologue, start]) {
+      for (const type of ['ADVANCE_DIALOGUE', 'MOVE', 'CONFIRM_TUTORIAL_REWARD', 'ENTER_NEXT_MAP']) {
+        assert.equal(gameReducer(state, { type, direction: 'ArrowLeft' }), state)
+      }
+    }
+  } finally {
+    await vite.close()
+  }
+})
+
 test('only valid moves advance tutorial; walls, furniture and bounds block movement', async () => {
   const { vite, gameReducer, initialGameState, getMap, movePlayer } = await loadGame()
   try {

@@ -8,14 +8,13 @@ test('temporary login accepts only the requested preview credentials', () => {
   assert.equal(acceptsDemoLogin('other', '1234'), false)
 })
 
-test('preview supports creation and tutorial without persistent member access', async () => {
+test('preview keeps only the new character in this session', async () => {
   const api = createDemoProfileApi()
-  await api.saveDraft({ character_id: 'miho' })
-  const active = await api.finalize({ character_id: 'miho', game_nickname: '체험자' })
-  assert.equal(active.profile_status, 'ACTIVE')
-  assert.equal(active.current_map_id, 'map001')
-  await api.completeTutorial()
-  assert.equal((await api.completeTutorial()).exp, 10)
-  assert.equal((await api.load()).current_map_id, 'map002')
+  await api.saveDraft({ character_id: 'toki', region_code: '11680' })
+  const character = { character_id: 'miho', game_nickname: '체험자', region_code: null,
+    region_name: null, travel_styles: ['forest', 'ocean'] }
+  const active = await api.finalize(character)
+  assert.deepEqual(active, { ...character, profile_status: 'ACTIVE' })
+  assert.deepEqual(await api.load(), active)
   assert.equal(await createDemoProfileApi().load(), null)
 })

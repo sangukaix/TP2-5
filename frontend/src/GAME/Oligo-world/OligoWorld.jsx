@@ -10,6 +10,8 @@ import { getMap } from './maps/mapRegistry'
 import { gameReducer, initialGameState, movePlayer } from './gameState'
 import { tutorialDialogue } from './tutorial/tutorial01'
 import CharacterSelect from './components/CharacterSelect'
+import OpeningScene from './tutorial/OpeningScene'
+import { travelStyles } from './travelStyles'
 import DialogueBox from './components/DialogueBox'
 import GameHud from './components/GameHud'
 import GameViewport from './components/GameViewport'
@@ -19,6 +21,10 @@ import { createDemoProfileApi } from './demoProfile'
 
 export default function OligoWorld() {
   const { user: member, loading: memberLoading } = useAuth()
+  return <WorldSession key={member?.id ?? 'guest'} member={member} memberLoading={memberLoading} />
+}
+
+function WorldSession({ member, memberLoading }) {
   const [demoUser, setDemoUser] = useState(null)
   const [showDemoLogin, setShowDemoLogin] = useState(false)
   const [demoApi] = useState(createDemoProfileApi)
@@ -43,14 +49,21 @@ export default function OligoWorld() {
   const dialogue = map?.id === 'map001' && state.phase === 'playing'
     ? tutorialDialogue(state.tutorial.stage) : null
 
+  const openProfile = useCallback(saved => {
+    setProfile(saved)
+    if (saved?.profile_status === 'ACTIVE') {
+      dispatch(demoUser ? { type: 'START_DEMO_PROLOGUE', characterId: saved.character_id } :
+        { type: 'HYDRATE_PROFILE', profile: saved })
+    }
+  }, [demoUser])
+
   useEffect(() => {
     if (authLoading || !user) return undefined
     let active = true
     api.load().then(saved => {
       if (!active) return
-      setProfile(saved)
+      openProfile(saved)
       setLoadedMemberId(user.id)
-      if (saved?.profile_status === 'ACTIVE') dispatch({ type: 'HYDRATE_PROFILE', profile: saved })
       setProfileStatus('ready')
     }).catch(error => {
       if (active) {
@@ -60,7 +73,7 @@ export default function OligoWorld() {
       }
     })
     return () => { active = false }
-  }, [authLoading, user, api])
+  }, [authLoading, user, api, openProfile])
 
   useEffect(() => {
     window.clearTimeout(saveTimer.current)
@@ -143,6 +156,12 @@ export default function OligoWorld() {
   const creating = currentProfile && profile?.profile_status !== 'ACTIVE'
   const playing = currentProfile && profile?.profile_status === 'ACTIVE'
 
+  if (playing && state.phase === 'demoPrologue') {
+    return <main className="oligo-world-prologue" aria-label="프롤로그">
+      <button type="button" autoFocus onClick={() => dispatch({ type: 'SKIP_DEMO_PROLOGUE' })}>SKIP</button>
+    </main>
+  }
+
   return (
     <main className="oligo-world-page">
       <div className="oligo-world-frame">
@@ -176,11 +195,16 @@ export default function OligoWorld() {
         <header className="oligo-world-game-header">
           <span>OLIGO WORLD{demoUser ? ' · 임시 체험 (새로고침 시 초기화)' : ''}</span><strong>CHAPTER 01 · 첫 걸음</strong>
         </header>
-        {creating ? <CharacterSelect api={api} profile={profile} memberRegionCode={user.region_code}
-          onFinalized={saved => {
-            setProfile(saved)
-            dispatch({ type: 'HYDRATE_PROFILE', profile: saved })
-          }} /> : playing && player && map && <>
+        {creating ? <CharacterSelect api={api} demo={Boolean(demoUser)} profile={profile}
+          memberRegionCode={user.region_code} onFinalized={openProfile} /> :
+        playing && state.phase === 'demoTutorial' ?
+          <section className="oligo-world-demo-tutorial" aria-labelledby="demo-tutorial-title">
+            <h1 id="demo-tutorial-title">튜토리얼 시작</h1>
+            <GameHud character={character} player={player} map={map} nickname={profile.game_nickname} />
+            <p>{profile.region_name || '지역 미선택'} · {travelStyles
+              .filter(style => profile.travel_styles.includes(style.id)).map(style => style.label).join(', ')}</p>
+            <OpeningScene characterId={player.characterId} background={map.background} />
+          </section> : playing && player && map && <>
           <GameHud character={character} player={player} map={map} nickname={profile.game_nickname} />
           <div className="oligo-world-play-layout">
             <GameViewport map={map} player={player} character={character} viewportRef={viewportRef} />

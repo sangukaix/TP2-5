@@ -8,13 +8,13 @@ import { gameProfileApi } from '../gameProfileApi'
 import { travelStyles } from '../travelStyles'
 import CharacterSprite from './CharacterSprite'
 
-export default function CharacterSelect({ profile, memberRegionCode, onFinalized, api = gameProfileApi }) {
+export default function CharacterSelect({ profile, memberRegionCode, onFinalized, demo = false, api = gameProfileApi }) {
   const initialRegion = profile?.region_code || memberRegionCode || ''
   const [form, setForm] = useState({
     characterId: profile?.character_id || characterIds[0],
     nickname: profile?.game_nickname || '',
     sidoCode: initialRegion.slice(0, 2), regionCode: initialRegion,
-    travelStyle: profile?.travel_style || '',
+    styleIds: demo ? (profile?.travel_styles ?? []) : (profile?.travel_style ? [profile.travel_style] : []),
   })
   const [saveStatus, setSaveStatus] = useState('idle')
   const [error, setError] = useState('')
@@ -25,9 +25,9 @@ export default function CharacterSelect({ profile, memberRegionCode, onFinalized
   const mounted = useRef(true)
   const { sidoOptions, sidoStatus, sigunguOptions, sigunguStatus } = useRegionCatalog(form.sidoCode)
   const region = findRegionByCode(sigunguOptions, form.regionCode)
-  const style = travelStyles.find(item => item.id === form.travelStyle)
+  const styles = travelStyles.filter(item => form.styleIds.includes(item.id))
   const nicknameValid = validCreationNickname(form.nickname)
-  const complete = Boolean(characters[form.characterId] && nicknameValid && region && style)
+  const complete = characters[form.characterId] && nicknameValid && (demo || region) && styles.length > 0
 
   useEffect(() => {
     mounted.current = true
@@ -48,7 +48,7 @@ export default function CharacterSelect({ profile, memberRegionCode, onFinalized
       const version = ++saveVersion.current
       const data = { character_id: form.characterId,
         game_nickname: nickname || null, region_code: form.regionCode || null,
-        travel_style: form.travelStyle || null }
+        ...(demo ? { travel_styles: form.styleIds } : { travel_style: form.styleIds[0] || null }) }
       const task = inFlight.current.catch(() => {}).then(() => api.saveDraft(data))
       inFlight.current = task
       task.then(() => { if (mounted.current && version === saveVersion.current) setSaveStatus('saved') })
@@ -60,7 +60,7 @@ export default function CharacterSelect({ profile, memberRegionCode, onFinalized
         })
     }, 800)
     return () => window.clearTimeout(saveTimer.current)
-  }, [form.characterId, form.nickname, form.regionCode, form.travelStyle, finalizing, api])
+  }, [form.characterId, form.nickname, form.regionCode, form.styleIds, finalizing, demo, api])
 
   useEffect(() => {
     function onKeyDown(event) {
@@ -80,6 +80,15 @@ export default function CharacterSelect({ profile, memberRegionCode, onFinalized
     })
   }
 
+  function selectStyle(id) {
+    setForm(current => {
+      if (!demo) return { ...current, styleIds: [id] }
+      const styleIds = current.styleIds.includes(id)
+        ? current.styleIds.filter(item => item !== id) : [...current.styleIds, id]
+      return { ...current, styleIds }
+    })
+  }
+
   async function finalize(event) {
     event.preventDefault()
     if (!complete || finalizing) return
@@ -89,8 +98,9 @@ export default function CharacterSelect({ profile, memberRegionCode, onFinalized
     try {
       await inFlight.current.catch(() => {})
       const active = await api.finalize({ character_id: form.characterId,
-        game_nickname: form.nickname.trim(), region_code: form.regionCode,
-        travel_style: form.travelStyle })
+        game_nickname: form.nickname.trim(), region_code: region?.regionCode ?? null,
+        ...(demo ? { region_name: region?.regionName ?? null, travel_styles: form.styleIds }
+          : { travel_style: form.styleIds[0] }) })
       onFinalized(active)
     } catch (failure) {
       setError(failure.message)
@@ -124,7 +134,7 @@ export default function CharacterSelect({ profile, memberRegionCode, onFinalized
         {form.nickname && !nicknameValid && <small className="oligo-world-creation-error">
           공백 없이 2~16자의 한글, 영문, 숫자, 밑줄을 입력해주세요.</small>}
         <fieldset className="oligo-world-creation-fieldset">
-          <legend>03 · 소속 지자체</legend>
+          <legend>03 · 소속 지자체{demo && ' (선택 사항)'}</legend>
           <div className="oligo-world-creation-regions">
             <label htmlFor="oligo-game-sido">시/도</label>
             <select id="oligo-game-sido" value={form.sidoCode} disabled={sidoStatus !== 'ready'}
@@ -142,7 +152,8 @@ export default function CharacterSelect({ profile, memberRegionCode, onFinalized
                 {item.sigunguName}</option>)}
             </select>
           </div>
-          <p>선택한 지자체는 지역 랭킹과 Oligo World 점령전에 사용됩니다.</p>
+          <p>{demo ? '지역 미선택으로도 체험할 수 있습니다.' :
+            '선택한 지자체는 지역 랭킹과 Oligo World 점령전에 사용됩니다.'}</p>
           {(sidoStatus === 'error' || sigunguStatus === 'error') &&
             <small className="oligo-world-creation-error">지역 목록을 불러오지 못했습니다.</small>}
         </fieldset>
@@ -150,9 +161,9 @@ export default function CharacterSelect({ profile, memberRegionCode, onFinalized
           <legend>04 · 좋아하는 여행 스타일</legend>
           <div className="oligo-world-style-grid">
             {travelStyles.map(item => <button key={item.id} type="button"
-              className={`oligo-world-style-chip${form.travelStyle === item.id ? ' oligo-world-style-chip--active' : ''}`}
-              aria-pressed={form.travelStyle === item.id}
-              onClick={() => setForm(current => ({ ...current, travelStyle: item.id }))}>
+              className={`oligo-world-style-chip${form.styleIds.includes(item.id) ? ' oligo-world-style-chip--active' : ''}`}
+              aria-pressed={form.styleIds.includes(item.id)}
+              onClick={() => selectStyle(item.id)}>
               {item.label}</button>)}
           </div>
           <p>여행 스타일은 앞으로 스킬 성장 방향과 연결됩니다.</p>
@@ -160,7 +171,7 @@ export default function CharacterSelect({ profile, memberRegionCode, onFinalized
         <div className="oligo-world-creation-summary">
           <strong>모험 기록</strong>
           <span>{character.name} · {form.nickname.trim() || '닉네임 미설정'}</span>
-          <span>{region?.regionName || '지역 미선택'} · {style?.label || '스타일 미선택'}</span>
+          <span>{region?.regionName || '지역 미선택'} · {styles.map(item => item.label).join(', ') || '스타일 미선택'}</span>
         </div>
         <p className="oligo-world-save-status" role="status">{form.nickname.trim() &&
           !/^[가-힣A-Za-z0-9_]{1,16}$/.test(form.nickname.trim()) ? '닉네임 형식을 확인해주세요.' :
