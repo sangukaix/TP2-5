@@ -29,6 +29,51 @@
   --foot-offset: -93%;
 }
 .oligo-opening-player, .oligo-opening-zzz, .oligo-opening-bolt, .oligo-opening-arrow { position: absolute; }
+.oligo-opening-sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);
+}
+.oligo-opening-strike-frames, .oligo-opening-strike-frames img {
+  position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+}
+.oligo-opening-walker {
+  position: absolute; aspect-ratio: 1; pointer-events: none;
+  /* The art baseline is at row 472 in a 512px square cell. */
+  transform: translate(-50%, -92.1875%);
+}
+.oligo-opening-walker > div {
+  width: 100%; height: 100%;
+  background-repeat: no-repeat; background-size: 400% 200%;
+}
+.oligo-opening-walker[data-facing="ArrowLeft"] > div,
+.oligo-opening-walker[data-facing="ArrowRight"] > div { background-position: 66.6667% 0; }
+.oligo-opening-walker > .is-walking {
+  animation: oligo-opening-walk 800ms steps(1) infinite;
+}
+@keyframes oligo-opening-walk {
+  0% { background-position: 0 0; }
+  12.5% { background-position: 33.3333% 0; }
+  25% { background-position: 66.6667% 0; }
+  37.5% { background-position: 100% 0; }
+  50% { background-position: 0 100%; }
+  62.5% { background-position: 33.3333% 100%; }
+  75% { background-position: 66.6667% 100%; }
+  87.5%, 100% { background-position: 100% 100%; }
+}
+.oligo-opening-keyboard {
+  position: absolute; right: 2%; bottom: 3%;
+  display: flex; gap: clamp(2px, .45cqw, 5px); padding: clamp(3px, .7cqw, 7px);
+  border: 1px solid #7b9ca6; border-radius: 7px; background: #111e32ec;
+  pointer-events: none;
+}
+.oligo-opening-keyboard kbd {
+  display: grid; place-items: center; min-width: 1.6em; padding: .24em .35em;
+  border: 1px solid #78969b; border-bottom-width: 2px; border-radius: 4px;
+  color: #e8faf7; background: #234055;
+  font: 700 clamp(9px, 1.65cqw, 16px)/1.2 system-ui, sans-serif;
+}
+.oligo-opening-keyboard .is-requested {
+  border-color: #ffdc9c; color: #182539; background: #ffdc9c;
+}
 .oligo-opening-player img {
   display: block; width: 100%;
   filter: drop-shadow(0 3px 3px #41281185);

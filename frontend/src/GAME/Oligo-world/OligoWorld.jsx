@@ -203,7 +203,7 @@ function WorldSession({ member, memberLoading }) {
             <GameHud character={character} player={player} map={map} nickname={profile.game_nickname} />
             <p>{profile.region_name || '지역 미선택'} · {travelStyles
               .filter(style => profile.travel_styles.includes(style.id)).map(style => style.label).join(', ')}</p>
-            <OpeningScene characterId={player.characterId} />
+            <OpeningScene key={player.characterId} characterId={player.characterId} />
           </section> : playing && player && map && <>
           <GameHud character={character} player={player} map={map} nickname={profile.game_nickname} />
           <div className="oligo-world-play-layout">

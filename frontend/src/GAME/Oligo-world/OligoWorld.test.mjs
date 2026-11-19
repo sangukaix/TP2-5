@@ -101,7 +101,7 @@ test('each new opening starts with the selected sleeper and Oligo speaking', asy
     const { default: OpeningScene } = await vite.ssrLoadModule('/src/GAME/Oligo-world/tutorial/OpeningScene.jsx')
     for (const [characterId, name] of Object.entries({ toki: '토키', hochi: '호치', miho: '미호' })) {
       const html = renderToStaticMarkup(createElement(OpeningScene, { characterId }))
-      assert.match(html, /background-image:[^"]+Home1\.png/)
+      assert.ok(html.includes(characterId === 'miho' ? 'Home1_Miho1.png' : 'Home1.png'))
       assert.ok(html.includes(`침대에 누워 자는 ${name}`))
       assert.match(decodeURI(html), /src="[^"]*올리고2\.png" alt="올리고 초상화"/)
       assert.doesNotMatch(html, /안내 캐릭터 올리고/)

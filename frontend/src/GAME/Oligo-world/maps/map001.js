@@ -1,4 +1,4 @@
-import homeImage from '../images/Home.png'
+import homeImage from '../images/places/Home.png'
 
 const tiles = [
   '############',
